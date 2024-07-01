@@ -1,0 +1,48 @@
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+export FILE=$HOME/.config/Code/User/settings.json
+if [ ! -d $HOME/Documents/vscodes ]; then
+		echo "downloading vscode"
+		wget -q -O visual-studio-code.tgz https://code.visualstudio.com/sha/download\?build\=stable\&os\=linux-x64
+		tar -xzf visual-studio-code.tgz
+		mv VSCode-linux-x64 vscode
+		rm -rf visual-studio-code.tgz
+		mv vscode $HOME/Documents
+		sed -i '$d' $FILE
+		perl -pi -e 'chomp if eof' $FILE
+		cat << 'EOF' >> $FILE
+,
+	"files.autoSave": "afterDelay",
+	"editor.insertSpaces": false,
+	"editor.detectIndentation": false
+}
+EOF
+	else
+		echo "vscode already downloaded"
+fi
+if grep -q "My custom aliases" $HOME/.zshrc; then
+	echo "aliases already added"
+	exit
+fi
+echo "adding aliases to .zshrc"
+cat << 'EOF' >> $HOME/.zshrc
+#My custom aliases
+alias fgit='find . -type d -name ".git"'
+alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
+c() {
+		if [ -z "$1" ]; then
+				$HOME/Documents/vscode/bin/code .
+		else
+				$HOME/Documents/vscode/bin/code $1
+		fi
+}
+gacp() {
+		if [ -z "$1" ]; then
+				git add -A && git commit -m "Added all" && git push
+		else
+				git add -A && git commit -m "$1" && git push
+		fi
+}
+export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
+EOF
+sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
+chsh -s $(which zsh)
