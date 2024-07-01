@@ -1,6 +1,6 @@
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 export FILE=$HOME/.config/Code/User/settings.json
-if [ ! -d $HOME/Documents/vscodes ]; then
+if [ ! -d $HOME/Documents/vscode ]; then
 		echo "downloading vscode"
 		wget -q -O visual-studio-code.tgz https://code.visualstudio.com/sha/download\?build\=stable\&os\=linux-x64
 		tar -xzf visual-studio-code.tgz
