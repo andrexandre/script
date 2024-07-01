@@ -1,15 +1,20 @@
+# Configurating oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+# Configurating vscode
 export FILE=$HOME/.config/Code/User/settings.json
 if [ ! -d $HOME/Documents/vscode ]; then
-		echo "downloading vscode"
-		wget -q -O visual-studio-code.tgz https://code.visualstudio.com/sha/download\?build\=stable\&os\=linux-x64
-		tar -xzf visual-studio-code.tgz
-		mv VSCode-linux-x64 vscode
-		rm -rf visual-studio-code.tgz
-		mv vscode $HOME/Documents
-		sed -i '$d' $FILE
-		perl -pi -e 'chomp if eof' $FILE
-		cat << 'EOF' >> $FILE
+	echo "downloading vscode"
+	wget -q -O visual-studio-code.tgz https://code.visualstudio.com/sha/download\?build\=stable\&os\=linux-x64
+	tar -xzf visual-studio-code.tgz
+	mv VSCode-linux-x64 vscode
+	rm -rf visual-studio-code.tgz
+	mv vscode $HOME/Documents
+	./code --install-extension mhutchie.git-graph
+	./code --install-extension ms-vscode.cpptools
+	./code --install-extension github.copilot
+	sed -i '$d' $FILE
+	perl -pi -e 'chomp if eof' $FILE
+	cat << 'EOF' >> $FILE
 ,
 	"files.autoSave": "afterDelay",
 	"editor.insertSpaces": false,
@@ -19,6 +24,7 @@ EOF
 	else
 		echo "vscode already downloaded"
 fi
+# Configurating alias
 if grep -q "My custom aliases" $HOME/.zshrc; then
 	echo "aliases already added"
 	exit
@@ -29,18 +35,18 @@ cat << 'EOF' >> $HOME/.zshrc
 alias fgit='find . -type d -name ".git"'
 alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
 c() {
-		if [ -z "$1" ]; then
-				$HOME/Documents/vscode/bin/code .
-		else
-				$HOME/Documents/vscode/bin/code $1
-		fi
+	if [ -z "$1" ]; then
+		$HOME/Documents/vscode/bin/code .
+	else
+		$HOME/Documents/vscode/bin/code $1
+	fi
 }
 gacp() {
-		if [ -z "$1" ]; then
-				git add -A && git commit -m "Added all" && git push
-		else
-				git add -A && git commit -m "$1" && git push
-		fi
+	if [ -z "$1" ]; then
+		git add -A && git commit -m "Added all" && git push
+	else
+		git add -A && git commit -m "$1" && git push
+	fi
 }
 export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
 EOF
