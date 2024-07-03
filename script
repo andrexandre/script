@@ -9,9 +9,11 @@ if [ ! -d $HOME/Documents/vscode ]; then
 	mv VSCode-linux-x64 vscode
 	rm -rf visual-studio-code.tgz
 	mv vscode $HOME/Documents
+	cd $HOME/Documents/vscode/bin
 	./code --install-extension mhutchie.git-graph
 	./code --install-extension ms-vscode.cpptools
 	./code --install-extension github.copilot
+#./code --install-extension github.copilot-chat
 	sed -i '$d' $FILE
 	perl -pi -e 'chomp if eof' $FILE
 	cat << 'EOF' >> $FILE
