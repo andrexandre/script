@@ -22,9 +22,12 @@ if [ ! -d $HOME/Documents/vscode ]; then
 		echo creating settings.json
 		cat << 'EOF' >> $FILE
 {
-	"files.autoSave": "afterDelay",
+	"github.copilot.editor.enableCodeActions": false,
+	"extensions.ignoreRecommendations": true,
+	"workbench.startupEditor": "none",
+	"editor.detectIndentation": false,
 	"editor.insertSpaces": false,
-	"editor.detectIndentation": false
+	"files.autoSave": "afterDelay"
 }
 EOF
 	else
