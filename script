@@ -1,7 +1,7 @@
+#!/bin/bash
 # Installing extensions
 wget https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
-firefox gnome_shell_integration-12.xpi
-firefox https://extensions.gnome.org/extension/1160/dash-to-panel/ https://extensions.gnome.org/extension/779/clipboard-indicator/
+firefox gnome_shell_integration-12.xpi https://extensions.gnome.org/extension/1160/dash-to-panel/ https://extensions.gnome.org/extension/779/clipboard-indicator/
 rm gnome_shell_integration-12.xpi
 # Configurating oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
@@ -18,19 +18,20 @@ if [ ! -d $HOME/Documents/vscode ]; then
 	./code --install-extension mhutchie.git-graph
 	./code --install-extension ms-vscode.cpptools
 	./code --install-extension github.copilot
-	sleep 5
-#fix when the settings wasn't created
-	sed -i '$d' $FILE
-	perl -pi -e 'chomp if eof' $FILE
-	cat << 'EOF' >> $FILE
-,
+	if [ ! -f $FILE ]; then
+		echo creating settings.json
+		cat << 'EOF' >> $FILE
+{
 	"files.autoSave": "afterDelay",
 	"editor.insertSpaces": false,
 	"editor.detectIndentation": false
 }
 EOF
 	else
-		echo "vscode already downloaded"
+		echo settings.json already created
+	fi
+else
+	echo "vscode already downloaded"
 fi
 # Configurating alias
 if grep -q "My custom aliases" $HOME/.zshrc; then
