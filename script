@@ -59,4 +59,5 @@ gacp() {
 export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
 EOF
 sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
-chsh -s $(which zsh)
+echo exec /bin/zsh > $HOME/.bashrc
+#chsh -s $(which zsh)
