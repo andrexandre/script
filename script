@@ -1,8 +1,8 @@
 # Installing extensions
 wget https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 firefox gnome_shell_integration-12.xpi
-firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
-firefox https://extensions.gnome.org/extension/779/clipboard-indicator/
+firefox https://extensions.gnome.org/extension/1160/dash-to-panel/ https://extensions.gnome.org/extension/779/clipboard-indicator/
+rm gnome_shell_integration-12.xpi
 # Configurating oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 # Configurating vscode
@@ -18,7 +18,8 @@ if [ ! -d $HOME/Documents/vscode ]; then
 	./code --install-extension mhutchie.git-graph
 	./code --install-extension ms-vscode.cpptools
 	./code --install-extension github.copilot
-#./code --install-extension github.copilot-chat
+	sleep 5
+#fix when the settings wasn't created
 	sed -i '$d' $FILE
 	perl -pi -e 'chomp if eof' $FILE
 	cat << 'EOF' >> $FILE
