@@ -1,3 +1,8 @@
+# Installing extensions
+wget https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
+firefox gnome_shell_integration-12.xpi
+firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
+firefox https://extensions.gnome.org/extension/779/clipboard-indicator/
 # Configurating oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 # Configurating vscode
