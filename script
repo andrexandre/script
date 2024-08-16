@@ -30,8 +30,7 @@ if grep -q "My custom aliases" $HOME/.zshrc; then
 else
 	echo -e "❌ aliases aren't added"
 fi
-# read -p "hi"
-exit
+read -p "Do you want to install missing programs? (Enter/Ctrl+C): "
 # Install the dependencies
 if [ "$ROOT" = 'y' ]; then
 	sudo apt-get update
