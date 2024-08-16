@@ -1,15 +1,48 @@
 #!/bin/bash
+# the vscode folder must be in Documents
 cd $HOME/Documents
-sudo apt-get update
-# Install the dependencies
-for cmd in wget curl zsh git
-do
-  if ! command -v $cmd &> /dev/null
-  then
-      sudo apt-get install -y $cmd
-  fi
+read -p "Do you have root privileges? (y/n): " ROOT
+if [ "$var" != 'y' ] && [ "$var" != 'n' ]; then
+	ROOT='n'
+	echo defaulted to $ROOT
+fi
+
+programs=("wget" "curl" "zsh" "git")
+for program in "${programs[@]}"; do
+	if [ "$ROOT" = 'n' ]; then
+		echo -e "ℹ️  $program is assumed to be installed"
+	elif command -v $program &> /dev/null; then
+		echo -e "✅ $program is installed"
+	else
+		echo -e "❌ $program isn't installed"
+	fi
 done
-# Installing extensions
+if ([ "$ROOT" = 'y' ] && command -v code &> /dev/null) ||
+	([ "$ROOT" = 'n' ] && [ -d $HOME/Documents/vscode ]); then
+	echo -e "✅ code is installed"
+	CODEINSTALLED=y
+else
+	echo -e "❌ code isn't installed"
+	CODEINSTALLED=n
+fi
+if grep -q "My custom aliases" $HOME/.zshrc; then
+	echo -e "✅ aliases are added"
+else
+	echo -e "❌ aliases aren't added"
+fi
+# read -p "hi"
+exit
+# Install the dependencies
+if [ "$ROOT" = 'y' ]; then
+	sudo apt-get update
+	for cmd in wget curl zsh git
+	do
+	if ! command -v $cmd &> /dev/null; then
+		sudo apt-get install -y $cmd
+	fi
+	done
+fi
+# Configurating extensions
 wget https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 firefox gnome_shell_integration-12.xpi https://extensions.gnome.org/extension/1160/dash-to-panel/ https://extensions.gnome.org/extension/779/clipboard-indicator/
 rm gnome_shell_integration-12.xpi
@@ -20,8 +53,14 @@ if [ $? -ne 0 ]; then
 fi
 # Configurating vscode
 export FILE=$HOME/.config/Code/User/settings.json
-if [ ! -d $HOME/Documents/vscode ]; then
-	echo "downloading vscode"
+if [ "$ROOT" = 'y' ] && [ "$CODEINSTALLED" = 'n' ]; then
+	open https://go.microsoft.com/fwlink/\?LinkID\=760868
+	cd $HOME/Downloads
+	sudo dpkg -i code*.deb
+	sudo apt-get install -f code
+	rm code*.deb
+elif [ "$ROOT" = 'n' ] && [ "$CODEINSTALLED" = 'n' ]; then
+	echo downloading vscode
 	wget -q -O visual-studio-code.tgz https://code.visualstudio.com/sha/download\?build\=stable\&os\=linux-x64
 	tar -xzf visual-studio-code.tgz
 	mv VSCode-linux-x64 vscode
@@ -31,9 +70,10 @@ if [ ! -d $HOME/Documents/vscode ]; then
 	./code --install-extension mhutchie.git-graph
 	./code --install-extension ms-vscode.cpptools
 	./code --install-extension github.copilot
-	if [ ! -f $FILE ]; then
-		echo creating settings.json
-		cat << 'EOF' >> $FILE
+fi
+if [ ! -f $FILE ]; then
+	echo creating settings.json
+	cat << 'EOF' >> $FILE
 {
 	"github.copilot.editor.enableCodeActions": false,
 	"extensions.ignoreRecommendations": true,
@@ -43,18 +83,15 @@ if [ ! -d $HOME/Documents/vscode ]; then
 	"files.autoSave": "afterDelay"
 }
 EOF
-	else
-		echo settings.json already created
-	fi
 else
-	echo "vscode already downloaded"
+	echo settings.json already created
 fi
 # Configurating alias
 if grep -q "My custom aliases" $HOME/.zshrc; then
-	echo "aliases already added"
+	echo aliases already added
 	exit
 fi
-echo "adding aliases to .zshrc"
+echo adding aliases to .zshrc
 cat << 'EOF' >> $HOME/.zshrc
 #My custom aliases
 alias fgit='find . -type d -name ".git"'
@@ -76,5 +113,12 @@ gacp() {
 export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
 EOF
 sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
-echo exec /bin/zsh > $HOME/.bashrc
-#chsh -s $(which zsh)
+if [ "$SHELL" = '/usr/bin/zsh' ]; then
+	echo changing the default shell
+	if [ "$ROOT" = 'y' ]; then
+		chsh -s $(which zsh)
+	else
+		echo exec /bin/zsh > $HOME/.bashrc
+else
+	echo default shell is already $SHELL
+fi
