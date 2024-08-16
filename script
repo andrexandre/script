@@ -6,7 +6,7 @@ for cmd in wget curl zsh git
 do
   if ! command -v $cmd &> /dev/null
   then
-      sudo apt-get install $cmd
+      sudo apt-get install -y $cmd
   fi
 done
 # Installing extensions
