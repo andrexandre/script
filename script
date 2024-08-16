@@ -1,12 +1,10 @@
 #!/bin/bash
 # the vscode folder must be in Documents
-cd $HOME/Documents
 read -p "Do you have root privileges? (y/n): " ROOT
 if [ "$ROOT" != 'y' ] && [ "$ROOT" != 'n' ]; then
 	ROOT='n'
 	echo defaulted to $ROOT
 fi
-
 programs=("wget" "curl" "zsh" "git")
 for program in "${programs[@]}"; do
 	if [ "$ROOT" = 'n' ]; then
@@ -42,13 +40,15 @@ if [ "$ROOT" = 'y' ]; then
 	done
 fi
 # Configurating extensions
+cd $HOME/Documents
 wget https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 firefox gnome_shell_integration-12.xpi https://extensions.gnome.org/extension/1160/dash-to-panel/ https://extensions.gnome.org/extension/779/clipboard-indicator/
 rm gnome_shell_integration-12.xpi
+cd -
 # Configurating oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 if [ $? -ne 0 ]; then
-    exit 1
+	read -p "Continue? (Enter/Ctrl+C): "
 fi
 # Configurating vscode
 export FILE=$HOME/.config/Code/User/settings.json
