@@ -32,11 +32,10 @@ read -p "Do you want to install missing programs? (Enter/Ctrl+C): "
 # Install the dependencies
 if [ "$ROOT" = 'y' ]; then
 	sudo apt-get update
-	for cmd in wget curl zsh git
-	do
-	if ! command -v $cmd &> /dev/null; then
-		sudo apt-get install -y $cmd
-	fi
+	for cmd in wget curl zsh git; do
+		if ! command -v $cmd &> /dev/null; then
+			sudo apt-get install -y $cmd
+		fi
 	done
 fi
 # Configurating extensions
@@ -118,6 +117,7 @@ if [ "$SHELL" = '/usr/bin/zsh' ]; then
 		chsh -s $(which zsh)
 	else
 		echo exec /bin/zsh > $HOME/.bashrc
+	fi
 else
 	echo default shell is already $SHELL
 fi
