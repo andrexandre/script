@@ -2,7 +2,7 @@
 # the vscode folder must be in Documents
 cd $HOME/Documents
 read -p "Do you have root privileges? (y/n): " ROOT
-if [ "$var" != 'y' ] && [ "$var" != 'n' ]; then
+if [ "$ROOT" != 'y' ] && [ "$ROOT" != 'n' ]; then
 	ROOT='n'
 	echo defaulted to $ROOT
 fi
