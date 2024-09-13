@@ -54,6 +54,7 @@ export FILE=$HOME/.config/Code/User/settings.json
 if [ "$ROOT" = 'y' ] && [ "$CODEINSTALLED" = 'n' ]; then
 	open https://go.microsoft.com/fwlink/\?LinkID\=760868
 	cd $HOME/Downloads
+	sleep 5
 	sudo dpkg -i code*.deb
 	sudo apt-get install -f code
 	rm code*.deb
