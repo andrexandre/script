@@ -1,6 +1,6 @@
 #!/bin/bash
 VSCODE_PATH=$HOME/Documents
-read < /dev/tty -p "Do you have root privileges? (y/n): " ROOT
+read < /dev/tty -p "Do you have root privileges? (Y/n): " ROOT
 if [ "$ROOT" != 'y' ] && [ "$ROOT" != 'n' ]; then
 	ROOT='y'
 fi
