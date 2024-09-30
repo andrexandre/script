@@ -2,26 +2,20 @@
 
 This script automates the installation and setup of a bunch of programs in Ubuntu
 
-## Features (WIP)
-
-It has 3 types of modes: `rootless`, `full` and `simple` and the following features:
+It has 3 modes: `rootless`, `full` and `simple` and the following features: `(WIP)`
 
 - Installs VScode and changes settings
-- Installs Oh my zsh and changes .zshrc
-- Installs Gnome shell extensions (dash to panel and clipboard indicator)
-- Adds alias and sets the default shell
+- Installs Oh my zsh and customizes .zshrc
+- Installs Gnome shell extensions like "dash to panel" and "clipboard indicator"
+- Adds shell alias and sets the default shell
 
-## How to use
+## Usage
 
 ```
-wget -O- tinyurl.com/qwsdWQSD | bash
+wget -qO- tinyurl.com/qwsdWQSD | bash
 ```
+> -q = quiet, -O- = redirect to the standard output
 
-> the -O- is to redirect to the standard output
-
-## Download the script
-```
-wget -qO script tinyurl.com/qwsdWQSD
-chmod +x script
-```
-> -q = quiet and -O specify a name
+> [!NOTE]
+> To see the script without running it, remove `| bash` from the command \
+> To download the script to a file, remove the flags from wget
