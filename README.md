@@ -2,7 +2,7 @@
 
 This script automates the installation and setup of a bunch of programs in Ubuntu
 
-It has 3 modes: `rootless`, `full` and `simple` and the following features: `(WIP)`
+It has 3 modes: `rootless`, `full` and `simple` (WIP)
 
 - Installs VScode and changes settings
 - Installs Oh my zsh and customizes .zshrc
