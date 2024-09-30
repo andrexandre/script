@@ -1,9 +1,8 @@
 #!/bin/bash
-# the vscode folder must be in Documents
+VSCODE_PATH=$HOME/Documents
 read < /dev/tty -p "Do you have root privileges? (y/n): " ROOT
 if [ "$ROOT" != 'y' ] && [ "$ROOT" != 'n' ]; then
-	ROOT='n'
-	echo defaulted to $ROOT
+	ROOT='y'
 fi
 programs=("wget" "curl" "zsh" "git")
 for program in "${programs[@]}"; do
@@ -16,7 +15,7 @@ for program in "${programs[@]}"; do
 	fi
 done
 if ([ "$ROOT" = 'y' ] && command -v code &> /dev/null) ||
-	([ "$ROOT" = 'n' ] && [ -d $HOME/Documents/vscode ]); then
+	([ "$ROOT" = 'n' ] && [ -d $VSCODE_PATH/vscode ]); then
 	echo -e "✅ code is installed"
 	CODEINSTALLED=y
 else
@@ -39,7 +38,7 @@ if [ "$ROOT" = 'y' ]; then
 	done
 fi
 # Configurating extensions
-cd $HOME/Documents
+cd $VSCODE_PATH
 wget https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 firefox gnome_shell_integration-12.xpi https://extensions.gnome.org/extension/1160/dash-to-panel/ https://extensions.gnome.org/extension/779/clipboard-indicator/
 rm gnome_shell_integration-12.xpi
@@ -64,8 +63,8 @@ elif [ "$ROOT" = 'n' ] && [ "$CODEINSTALLED" = 'n' ]; then
 	tar -xzf visual-studio-code.tgz
 	mv VSCode-linux-x64 vscode
 	rm -rf visual-studio-code.tgz
-	mv vscode $HOME/Documents
-	cd $HOME/Documents/vscode/bin
+	mv vscode $VSCODE_PATH
+	cd $VSCODE_PATH/vscode/bin
 	./code --install-extension mhutchie.git-graph
 	./code --install-extension ms-vscode.cpptools
 	./code --install-extension github.copilot
@@ -97,14 +96,14 @@ alias fgit='find . -type d -name ".git"'
 alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
 c() {
 	if [ -z "$1" ]; then
-		$HOME/Documents/vscode/bin/code .
+		$VSCODE_PATH/vscode/bin/code .
 	else
-		$HOME/Documents/vscode/bin/code $1
+		$VSCODE_PATH/vscode/bin/code $1
 	fi
 }
 gacp() {
 	if [ -z "$1" ]; then
-		git add -A && git commit -m "Added all" && git push
+		git add -A && git commit -m "Update" && git push
 	else
 		git add -A && git commit -m "$1" && git push
 	fi
