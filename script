@@ -1,6 +1,6 @@
 #!/bin/bash
 # the vscode folder must be in Documents
-read -p "Do you have root privileges? (y/n): " ROOT
+read < /dev/tty -p "Do you have root privileges? (y/n): " ROOT
 if [ "$ROOT" != 'y' ] && [ "$ROOT" != 'n' ]; then
 	ROOT='n'
 	echo defaulted to $ROOT
@@ -28,7 +28,7 @@ if grep -q "My custom aliases" $HOME/.zshrc; then
 else
 	echo -e "❌ aliases aren't added"
 fi
-read -p "Do you want to install missing programs? (Enter/Ctrl+C): "
+read < /dev/tty -p "Do you want to install missing programs? (Enter/Ctrl+C): "
 # Install the dependencies
 if [ "$ROOT" = 'y' ]; then
 	sudo apt-get update
@@ -47,7 +47,7 @@ cd -
 # Configurating oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 if [ $? -ne 0 ]; then
-	read -p "Continue? (Enter/Ctrl+C): "
+	read < /dev/tty -p "Continue? (Enter/Ctrl+C): "
 fi
 # Configurating vscode
 export FILE=$HOME/.config/Code/User/settings.json

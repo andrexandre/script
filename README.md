@@ -1,8 +1,10 @@
 # How to use
 
-~~wget -O- tinyurl.com/qwsdWQSD | sh~~
+```
+wget -O- tinyurl.com/qwsdWQSD | sh
+```
 
-> ~~the -O- is to redirect to the standard output~~
+> the -O- is to redirect to the standard output
 
 ### Download the script
 ```
