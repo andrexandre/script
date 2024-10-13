@@ -1,6 +1,6 @@
-# Post installation script
+# Linux post installation script
 
-This script automates the installation and setup of a bunch of programs in Ubuntu
+This script automates the installation and setup of a bunch of programs in Linux
 
 ~It has 3 modes: `rootless`, `full` and `simple`~ (WIP)
 
@@ -12,7 +12,7 @@ This script automates the installation and setup of a bunch of programs in Ubunt
 ## Usage
 
 ```
-wget -qO- tinyurl.com/qwsdWQSD | bash
+wget -qO- tinyurl.com/qwsdqwsd | bash
 ```
 > -q = quiet, -O- = redirect to the standard output
 
