@@ -2,20 +2,19 @@
 
 This script automates the installation and setup of a bunch of programs in Linux
 
-~It has 3 modes: `rootless`, `full` and `simple`~ (WIP)
-
 - Installs VScode and changes settings
 - Installs Oh my zsh and customizes .zshrc
-- Installs Gnome shell extensions like "dash to panel" and "clipboard indicator" (WIP)
 - Adds shell alias and sets the default shell
+- ~Installs Gnome shell extensions like "dash to panel" and "clipboard indicator"~ (WIP)
+
+~It has 3 modes: `rootless`, `full` and `simple`~ (WIP)
 
 ## Usage
 
 ```
-wget -qO- tinyurl.com/qwsdqwsd | bash
+curl -sL andrexandre.github.io | sh
 ```
-> -q = quiet, -O- = redirect to the standard output
+> -L = automatically follow the redirect, -s = silent (don't show progress meter)
 
 > [!NOTE]
-> To see the script without running it, remove `| bash` from the command \
-> To download the script to a file, remove the flags from wget
+> To view or download the script, visit the [script](script) file on GitHub
