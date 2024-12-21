@@ -1,5 +1,11 @@
 #!/bin/bash
 
+blue=220
+yellow=27
+text_styling="--border-foreground $yellow --foreground $blue"
+input_styling="--selected.background $yellow --prompt.foreground $blue"
+VSCODE_PATH=$HOME/Documents
+
 # checking if the user is root and ~/.local/bin is in PATH
 if [ "$EUID" -eq 0 ]; then
 	echo "Please do not run as root"
@@ -18,14 +24,9 @@ if ! command -v gum &> /dev/null; then
 	rm -rf gum_0.14.5_Linux_x86_64.tar.gz gum_0.14.5_Linux_x86_64
 fi
 
-gum style --foreground 45 --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
+gum style $text_styling --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
+gum confirm "Do you have root privileges?" $input_styling && ROOT='y' || ROOT='n'
 
-read < /dev/tty -p "This is just testing, continue to normal execution? (Enter/Ctrl+C): "
-VSCODE_PATH=$HOME/Documents
-read < /dev/tty -p "Do you have root privileges? (Y/n): " ROOT
-if [ "$ROOT" != 'y' ] && [ "$ROOT" != 'n' ]; then
-	ROOT='y'
-fi
 programs=("wget" "curl" "zsh" "git")
 for program in "${programs[@]}"; do
 	if [ "$ROOT" = 'n' ]; then
@@ -49,7 +50,7 @@ if grep -q "My custom aliases" $HOME/.zshrc; then
 else
 	echo -e "❌ aliases aren't added"
 fi
-read < /dev/tty -p "Do you want to install missing programs? (Enter/Ctrl+C): "
+gum confirm "Do you want to install missing programs?" $input_styling && true || exit
 # Install the dependencies
 if [ "$ROOT" = 'y' ]; then
 	sudo apt-get update
@@ -68,7 +69,7 @@ cd -
 # Configurating oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 if [ $? -ne 0 ]; then
-	read < /dev/tty -p "Continue? (Enter/Ctrl+C): "
+	gum confirm "Continue?" $input_styling && true || exit
 fi
 # Configurating vscode
 export FILE=$HOME/.config/Code/User/settings.json

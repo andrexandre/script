@@ -7,15 +7,15 @@ MAGENTA		:= \033[1;35m
 CYAN		:= \033[1;36m
 WHITE		:= \033[1;37m
 
-LINK = localhost:8000/script
-
 NAME = script
+
+LINK = localhost:8000/$(NAME)
 
 all:
 	clear ; ./$(NAME)
 
 run:
-	curl -sL $(LINK) | sh
+	curl -sL $(LINK) | bash
 
 test:
 	curl -sL andrexandre.github.io | sh
