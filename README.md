@@ -1,4 +1,4 @@
-# Linux post installation script
+# Linux setup script
 
 This script automates the installation and setup of a bunch of programs in Linux
 

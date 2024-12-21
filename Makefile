@@ -7,29 +7,24 @@ MAGENTA		:= \033[1;35m
 CYAN		:= \033[1;36m
 WHITE		:= \033[1;37m
 
-# LINK = tinyurl.com/qwsdWQSD
-LINK = localhost:8080/script
+LINK = localhost:8000/script
 
 NAME = script
 
 all:
-	wget -qO- $(LINK) | bash
-
-test:
-	wget -qO- $(LINK)
-
-download:
-	wget -qO $(NAME) $(LINK)
-	@chmod 777 $(NAME)
+	clear ; ./$(NAME)
 
 run:
-	./$(NAME)
+	curl -sL $(LINK) | sh
+
+test:
+	curl -sL andrexandre.github.io | sh
 
 start-server:
-	docker run -d --rm -v $$(pwd):/usr/share/nginx/html -p 8080:80 nginx
+	python -m http.server 8000 > /dev/null 2>&1 &
 
 end-server:
-	docker stop $$(docker ps -q)
+	pkill python
 
 clean:
 	rm $(NAME)

@@ -1,4 +1,26 @@
 #!/bin/bash
+
+# checking if the user is root and ~/.local/bin is in PATH
+if [ "$EUID" -eq 0 ]; then
+	echo "Please do not run as root"
+	exit 1
+fi
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+	export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# installation of gum
+if ! command -v gum &> /dev/null; then
+	echo "Installing gum..."
+	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/v0.14.5/gum_0.14.5_Linux_x86_64.tar.gz
+	tar -xzf gum_0.14.5_Linux_x86_64.tar.gz
+	mv gum_0.14.5_Linux_x86_64/gum $HOME/.local/bin
+	rm -rf gum_0.14.5_Linux_x86_64.tar.gz gum_0.14.5_Linux_x86_64
+fi
+
+gum style --foreground 45 --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
+
+read < /dev/tty -p "This is just testing, continue to normal execution? (Enter/Ctrl+C): "
 VSCODE_PATH=$HOME/Documents
 read < /dev/tty -p "Do you have root privileges? (Y/n): " ROOT
 if [ "$ROOT" != 'y' ] && [ "$ROOT" != 'n' ]; then
