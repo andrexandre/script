@@ -26,5 +26,5 @@ start-server:
 end-server:
 	pkill python
 
-clean:
-	rm $(NAME)
+sandbox:
+	docker run -it --rm jonlabelle/network-tools bash -c "adduser --disabled-password user ; su - user"

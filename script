@@ -11,12 +11,14 @@ if [ "$EUID" -eq 0 ]; then
 	echo "Please do not run as root"
 	exit 1
 fi
+[ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 	export PATH="$HOME/.local/bin:$PATH"
 fi
 
 # installation of gum
 if ! command -v gum &> /dev/null; then
+	cd ~
 	echo "Installing gum..."
 	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/v0.14.5/gum_0.14.5_Linux_x86_64.tar.gz
 	tar -xzf gum_0.14.5_Linux_x86_64.tar.gz
@@ -27,7 +29,7 @@ fi
 gum style $text_styling --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
 gum confirm "Do you have root privileges?" $input_styling && ROOT='y' || ROOT='n'
 
-programs=("wget" "curl" "zsh" "git")
+programs=("zsh" "git")
 for program in "${programs[@]}"; do
 	if [ "$ROOT" = 'n' ]; then
 		echo -e "ℹ️  $program is assumed to be installed"
@@ -45,10 +47,14 @@ else
 	echo -e "❌ code isn't installed"
 	CODEINSTALLED=n
 fi
-if grep -q "My custom aliases" $HOME/.zshrc; then
-	echo -e "✅ aliases are added"
+if [ -f $HOME/.zshrc ]; then
+	if grep -q "My custom aliases" $HOME/.zshrc; then
+		echo -e "✅ aliases are added"
+	else
+		echo -e "❌ aliases aren't added"
+	fi
 else
-	echo -e "❌ aliases aren't added"
+	echo -e "❌ zsh isn't installed"
 fi
 gum confirm "Do you want to install missing programs?" $input_styling && true || exit
 # Install the dependencies
@@ -94,6 +100,7 @@ elif [ "$ROOT" = 'n' ] && [ "$CODEINSTALLED" = 'n' ]; then
 fi
 if [ ! -f $FILE ]; then
 	echo creating settings.json
+	[ -d "$HOME/.config/Code/User" ] || mkdir -p "$HOME/.config/Code/User"
 	cat << 'EOF' >> $FILE
 {
 	"github.copilot.editor.enableCodeActions": false,
