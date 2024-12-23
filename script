@@ -23,9 +23,18 @@ fi
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 	export PATH="$HOME/.local/bin:$PATH"
 fi
+# TEMP_DIR=$(echo testing)
+# mkdir $TEMP_DIR
+# Create a temporary directory and enter into it
+TEMP_DIR=$(mktemp -d)
+if [ ! -d "$TEMP_DIR" ]; then
+	echo "Failed to create temp directory, going home"
+	cd ~
+else
+	cd $TEMP_DIR
+fi
 
 if ! command -v gum &> /dev/null; then
-	cd ~
 	echo "Downloading gum..."
 	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/v0.14.5/gum_0.14.5_Linux_x86_64.tar.gz
 	tar -xzf gum_0.14.5_Linux_x86_64.tar.gz
@@ -34,14 +43,13 @@ if ! command -v gum &> /dev/null; then
 fi
 
 gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
+gum style --bold --foreground 0 "This script may not work with bash as default shell"
 
 verify_installed_stuff() {
 	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 	cmds=("zsh" "git")
 	for cmd in "${cmds[@]}"; do
-		if [ "$ROOT" = 'n' ]; then
-			echo -e "ℹ️  $cmd is assumed to be installed"
-		elif command -v $cmd &> /dev/null; then
+		if command -v $cmd &> /dev/null; then
 			echo -e "✅ $cmd is installed"
 		else
 			echo -e "❌ $cmd isn't installed"
@@ -50,10 +58,8 @@ verify_installed_stuff() {
 	if ([ "$ROOT" = 'y' ] && command -v code &> /dev/null) ||
 		([ "$ROOT" = 'n' ] && [ -d $VSCODE_PATH/vscode ]); then
 		echo -e "✅ code is installed"
-		CODEINSTALLED=y
 	else
 		echo -e "❌ code isn't installed"
-		CODEINSTALLED=n
 	fi
 	if [ -f $HOME/.zshrc ]; then
 		if grep -q "My custom aliases" $HOME/.zshrc; then
@@ -62,21 +68,20 @@ verify_installed_stuff() {
 			echo -e "❌ aliases aren't added"
 		fi
 	else
-		echo -e "❌ zsh isn't installed"
+		echo -e "❌ there's no .zshrc file"
 	fi
 }
-install_cmd() {
+install_command() {
 	if [ -z "$1" ]; then
-		echo "No program name provided."
-		return
-	fi
-	if [ "$1" = "-i" ] || [ "$1" = "--input" ]; then
 		set -- "$(gum input --placeholder "Enter the program to install:")"
+		if [ -z "$1" ]; then
+			return
+		fi
 	fi
 	if ! command -v $1 &> /dev/null; then
 		if ! apt-cache policy $1 | grep -q 'Installed: (none)'; then
-			echo "The package $1 doesn't exist."
-			return
+			echo "The package $1 doesn't exist"
+			return 1
 		fi
 		if [ "$ROOT" = 'y' ]; then
 			sudo apt-get install -y $1
@@ -89,52 +94,65 @@ install_cmd() {
 			rm -rf /tmp/command
 		fi
 	else
-		echo "$1 is already installed."
+		echo "$1 is already installed"
 	fi
 }
 # Configurating extensions
 install_gnome_extensions() {
-	cd $VSCODE_PATH
-	wget https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
-	firefox gnome_shell_integration-12.xpi https://extensions.gnome.org/extension/1160/dash-to-panel/ https://extensions.gnome.org/extension/779/clipboard-indicator/
-	rm gnome_shell_integration-12.xpi
-	cd -
+	# sudo apt-get install chrome-gnome-shell # needed to install extensions
+	# sudo apt-get install gnome-shell-extensions # maybe it is the extensions manager gui, idk
+	# sudo apt-get install gnome-shell-extension-manager # for sure it is the extensions manager
+	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
+		wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
+		firefox gnome_shell_integration-12.xpi
+		gum confirm "Have you clicked [Add] on firefox?" && true || return
+		rm gnome_shell_integration-12.xpi
+	fi
+	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
+		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
+		gum confirm "Have you turned [ON] and clicked [Install]?" && true || return
+	fi
+	if ! gnome-extensions list --enabled | grep -q clipboard-indicator; then
+		firefox https://extensions.gnome.org/extension/779/clipboard-indicator/
+		gum confirm "Have you turned [ON] and clicked [Install]?" && true || return
+	fi
 }
 # Configurating oh-my-zsh
 install_oh_my_zsh() {
-	install_cmd "zsh"
-	install_cmd "git"
+	install_command "zsh"
+	install_command "git"
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
-# Configurating vscode
-export FILE=$HOME/.config/Code/User/settings.json
 install_vscode_root() {
-	open https://go.microsoft.com/fwlink/\?LinkID\=760868
-	cd $HOME/Downloads
-	sleep 5
-	sudo dpkg -i code*.deb
-	sudo apt-get install -f code
-	rm code*.deb
+	# needs testing
+	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+	sudo apt install vscode.deb
+	rm vscode.deb
 }
 install_vscode_rootless() {
-	echo downloading vscode
-	wget -q -O visual-studio-code.tgz https://code.visualstudio.com/sha/download\?build\=stable\&os\=linux-x64
-	tar -xzf visual-studio-code.tgz
+	# needs testing
+	wget -q --show-progress -O VSCode-linux-x64.tgz "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64"
+	tar -xzf VSCode-linux-x64.tgz
+	rm VSCode-linux-x64.tgz
 	mv VSCode-linux-x64 vscode
-	rm -rf visual-studio-code.tgz
 	mv vscode $VSCODE_PATH
-	cd $VSCODE_PATH/vscode/bin
+	# if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' $HOME/.zshrc; then
+	# 	echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
+	# fi
+	ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/code
 }
 install_vscode_extensions() {
-	./code --install-extension mhutchie.git-graph
-	./code --install-extension ms-vscode.cpptools
-	./code --install-extension github.copilot
+	code --install-extension mhutchie.git-graph
+	code --install-extension ms-vscode.cpptools
+	code --install-extension github.copilot
 }
+export CODESETTINGSFILE=$HOME/.config/Code/User/settings.json
+# Configurating vscode
 configure_vscode_settings() {
-	if [ ! -f $FILE ]; then
+	if [ ! -f $CODESETTINGSFILE ]; then
 		echo creating settings.json
 		[ -d "$HOME/.config/Code/User" ] || mkdir -p "$HOME/.config/Code/User"
-		cat << 'EOF' >> $FILE
+		cat << 'EOF' >> $CODESETTINGSFILE
 {
 	"github.copilot.editor.enableCodeActions": false,
 	"extensions.ignoreRecommendations": true,
@@ -168,9 +186,9 @@ c() {
 }
 gacp() {
 	if [ -z "$1" ]; then
-		git add -A && git commit -m "Update" && git push
+		git add . && git commit -m "Update" && git push
 	else
-		git add -A && git commit -m "$1" && git push
+		git add . && git commit -m "$1" && git push
 	fi
 }
 export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
@@ -179,7 +197,6 @@ EOF
 }
 setting_default_shell() {
 	if [ "$SHELL" = '/usr/bin/zsh' ]; then
-		echo changing the default shell
 		if [ "$ROOT" = 'y' ]; then
 			chsh -s $(which zsh)
 		else
@@ -189,19 +206,31 @@ setting_default_shell() {
 		echo default shell is already $SHELL
 	fi
 }
+exit_script() {
+	cd - > /dev/null
+	rmdir $TEMP_DIR
+	exit
+}
 main() {
 	while true; do
-		REPLY=$(gum choose mode ls "install_cmd -i" install_gnome_extensions install_oh_my_zsh install_vscode_root install_vscode_extensions configure_vscode_settings adding_alias setting_default_shell exit)
-		if [ "$REPLY" = "mode" ]; then
-			verify_installed_stuff
-			break
-		fi
-		$REPLY
+		# --no-limit implementation TO-DO
+		REPLY=$(gum choose mode install_command install_gnome_extensions install_oh_my_zsh install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings adding_alias setting_default_shell about exit_script)
+		case $REPLY in
+			mode)
+				break
+				;;
+			about)
+				open https://github.com/andrexandre/script > /dev/null
+				;;
+			*)
+				$REPLY
+		esac
 	done
 }
 main
+verify_installed_stuff
 echo mode root: $ROOT
-exit
+gum confirm "Do you want to continue?" && true || exit_script
 install_gnome_extensions
 install_oh_my_zsh
 if [ "$ROOT" = 'y' ]; then
@@ -213,3 +242,4 @@ install_vscode_extensions
 configure_vscode_settings
 adding_alias
 setting_default_shell
+exit_script
