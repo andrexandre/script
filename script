@@ -35,11 +35,15 @@ else
 fi
 
 if ! command -v gum &> /dev/null; then
+	echo "Checking for the latest version of gum..."
+	latest_release=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
+	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
 	echo "Downloading gum..."
-	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/v0.14.5/gum_0.14.5_Linux_x86_64.tar.gz
-	tar -xzf gum_0.14.5_Linux_x86_64.tar.gz
-	mv gum_0.14.5_Linux_x86_64/gum $HOME/.local/bin
-	rm -rf gum_0.14.5_Linux_x86_64.tar.gz gum_0.14.5_Linux_x86_64
+	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/$latest_release/$gum_latest_release.tar.gz
+	tar -xzf $gum_latest_release.tar.gz
+	rm $HOME/.local/bin
+	mv $gum_latest_release/gum $HOME/.local/bin
+	rm -rf $gum_latest_release.tar.gz $gum_latest_release
 fi
 
 gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
@@ -211,10 +215,27 @@ exit_script() {
 	rmdir $TEMP_DIR
 	exit
 }
+update_gum() {
+	echo "Checking for the latest version of gum..."
+	current_release=$(gum -v | cut -d ' ' -f 3)
+	latest_release=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
+	if [ "$current_release" = "$latest_release" ]; then
+		gum style --bold --foreground $yellow --border-foreground $blue --border double --padding "0 1" --align center "Gum is already on the latest version"
+		return
+	fi
+	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
+	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/$latest_release/$gum_latest_release.tar.gz
+	tar -xzf $gum_latest_release.tar.gz
+	rm $HOME/.local/bin/gum
+	mv $gum_latest_release/gum $HOME/.local/bin
+	rm -rf $gum_latest_release.tar.gz $gum_latest_release
+	echo "Run the script again to use the updated version of gum"
+	exit
+}
 main() {
 	while true; do
 		# --no-limit implementation TO-DO
-		REPLY=$(gum choose mode install_command install_gnome_extensions install_oh_my_zsh install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings adding_alias setting_default_shell about exit_script)
+		REPLY=$(gum choose mode install_command install_gnome_extensions install_oh_my_zsh install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings adding_alias setting_default_shell update_gum about exit_script)
 		case $REPLY in
 			mode)
 				break
