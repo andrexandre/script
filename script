@@ -36,7 +36,7 @@ fi
 
 if ! command -v gum &> /dev/null; then
 	echo "Checking for the latest version of gum..."
-	latest_release=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
+	latest_release=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -n 1)
 	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
 	echo "Downloading gum..."
 	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/$latest_release/$gum_latest_release.tar.gz
