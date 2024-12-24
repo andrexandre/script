@@ -23,8 +23,7 @@ fi
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 	export PATH="$HOME/.local/bin:$PATH"
 fi
-# TEMP_DIR=$(echo testing)
-# mkdir $TEMP_DIR
+# TEMP_DIR=$(echo debugging) ; mkdir $TEMP_DIR
 # Create a temporary directory and enter into it
 TEMP_DIR=$(mktemp -d)
 if [ ! -d "$TEMP_DIR" ]; then
@@ -41,16 +40,17 @@ if ! command -v gum &> /dev/null; then
 	echo "Downloading gum..."
 	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/$latest_release/$gum_latest_release.tar.gz
 	tar -xzf $gum_latest_release.tar.gz
-	rm $HOME/.local/bin
 	mv $gum_latest_release/gum $HOME/.local/bin
 	rm -rf $gum_latest_release.tar.gz $gum_latest_release
 fi
 
 gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
-gum style --bold --foreground 0 "This script may not work with bash as default shell"
+if [[ ! $SHELL = */zsh ]]; then
+	gum style --bold --foreground 0 "This script may not work with bash as default shell"
+fi
+gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 
-verify_installed_stuff() {
-	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
+check_installed_programs() {
 	cmds=("zsh" "git")
 	for cmd in "${cmds[@]}"; do
 		if command -v $cmd &> /dev/null; then
@@ -121,7 +121,6 @@ install_gnome_extensions() {
 		gum confirm "Have you turned [ON] and clicked [Install]?" && true || return
 	fi
 }
-# Configurating oh-my-zsh
 install_oh_my_zsh() {
 	install_command "zsh"
 	install_command "git"
@@ -151,7 +150,6 @@ install_vscode_extensions() {
 	code --install-extension github.copilot
 }
 export CODESETTINGSFILE=$HOME/.config/Code/User/settings.json
-# Configurating vscode
 configure_vscode_settings() {
 	if [ ! -f $CODESETTINGSFILE ]; then
 		echo creating settings.json
@@ -170,7 +168,6 @@ EOF
 		echo settings.json already created
 	fi
 }
-# Configurating alias
 adding_alias() {
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases already added
@@ -200,7 +197,7 @@ EOF
 	sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
 }
 setting_default_shell() {
-	if [ "$SHELL" = '/usr/bin/zsh' ]; then
+	if [ "$SHELL" != '/usr/bin/zsh' ]; then
 		if [ "$ROOT" = 'y' ]; then
 			chsh -s $(which zsh)
 		else
@@ -223,6 +220,7 @@ update_gum() {
 		gum style --bold --foreground $yellow --border-foreground $blue --border double --padding "0 1" --align center "Gum is already on the latest version"
 		return
 	fi
+	echo "Downloading gum..."
 	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
 	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/$latest_release/$gum_latest_release.tar.gz
 	tar -xzf $gum_latest_release.tar.gz
@@ -249,7 +247,7 @@ main() {
 	done
 }
 main
-verify_installed_stuff
+check_installed_programs
 echo mode root: $ROOT
 gum confirm "Do you want to continue?" && true || exit_script
 install_gnome_extensions
