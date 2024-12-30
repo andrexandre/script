@@ -20,6 +20,10 @@ run:
 test:
 	curl -sL andrexandre.github.io | sh
 
+debug:
+	@./$(NAME) --debug
+	@ls /tmp/tmp*
+
 start-server:
 	python -m http.server 8000 > /dev/null 2>&1 &
 

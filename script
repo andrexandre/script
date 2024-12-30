@@ -23,7 +23,12 @@ fi
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 	export PATH="$HOME/.local/bin:$PATH"
 fi
-# TEMP_DIR=$(echo debugging) ; mkdir $TEMP_DIR
+# if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' $HOME/.zshrc; then
+# 	echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
+# fi
+if [ "$1" == "--debug" ]; then
+	TEMP_DIR=$(echo debugging) ; mkdir $TEMP_DIR
+fi
 # Create a temporary directory and enter into it
 TEMP_DIR=$(mktemp -d)
 if [ ! -d "$TEMP_DIR" ]; then
@@ -34,14 +39,15 @@ else
 fi
 
 if ! command -v gum &> /dev/null; then
-	echo "Checking for the latest version of gum..."
-	latest_release=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -n 1)
-	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
-	echo "Downloading gum..."
-	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/$latest_release/$gum_latest_release.tar.gz
-	tar -xzf $gum_latest_release.tar.gz
-	mv $gum_latest_release/gum $HOME/.local/bin
-	rm -rf $gum_latest_release.tar.gz $gum_latest_release
+	repo=charmbracelet/gum
+	echo "Checking for the latest version of $repo..."
+	latest_release=$(curl -s https://api.github.com/repos/$repo/releases | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -n 1)
+	latest_release_name=gum_${latest_release#v}_Linux_x86_64
+	echo "Downloading $repo..."
+	wget -q --show-progress https://github.com/$repo/releases/download/$latest_release/$latest_release_name.tar.gz
+	tar -xzf $latest_release_name.tar.gz
+	mv $latest_release_name/gum $HOME/.local/bin
+	rm -rf $latest_release_name.tar.gz $latest_release_name
 fi
 
 gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
@@ -103,9 +109,9 @@ install_command() {
 }
 # Configurating extensions
 install_gnome_extensions() {
-	# sudo apt-get install chrome-gnome-shell # needed to install extensions
-	# sudo apt-get install gnome-shell-extensions # maybe it is the extensions manager gui, idk
-	# sudo apt-get install gnome-shell-extension-manager # for sure it is the extensions manager
+	# sudo apt-get install -y chrome-gnome-shell # needed to install extensions
+	# sudo apt-get install -y gnome-shell-extensions # maybe it is the extensions manager gui, idk
+	# sudo apt-get install -y gnome-shell-extension-manager # for sure it is the extensions manager
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
 		wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 		firefox gnome_shell_integration-12.xpi
@@ -127,21 +133,16 @@ install_oh_my_zsh() {
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
-	# needs testing
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
 	sudo apt install vscode.deb
 	rm vscode.deb
 }
 install_vscode_rootless() {
-	# needs testing
 	wget -q --show-progress -O VSCode-linux-x64.tgz "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64"
 	tar -xzf VSCode-linux-x64.tgz
 	rm VSCode-linux-x64.tgz
 	mv VSCode-linux-x64 vscode
 	mv vscode $VSCODE_PATH
-	# if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' $HOME/.zshrc; then
-	# 	echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
-	# fi
 	ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/code
 }
 install_vscode_extensions() {
@@ -217,7 +218,7 @@ install_docker() {
 		$(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 		sudo apt-get update
 
-		sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+		sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 		sudo groupadd docker
 		sudo usermod -aG docker $USER
@@ -236,45 +237,74 @@ setting_default_shell() {
 		echo default shell is already $SHELL
 	fi
 }
+install_edge() {
+	latest_version=$(curl -s https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
+	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
+	sudo apt install edge.deb
+	rm edge.deb
+}
+system_update() {
+	sudo apt-get update && sudo apt-get upgrade -y
+}
+install_extras() {
+	sudo apt-get install -y dconf gnome-tweaks build-essential ubuntu-restricted-extras
+}
+remove_poweroff_countdown() {
+	gsettings set org.gnome.SessionManager logout-prompt false
+}
+setup_tlp() {
+	sudo apt-get install -y tlp tlp-rdw
+	sudo systemctl enable tlp
+}
 exit_script() {
 	cd - > /dev/null
 	rmdir $TEMP_DIR
 	exit
 }
 update_gum() {
-	echo "Checking for the latest version of gum..."
+	repo=charmbracelet/gum
+	echo "Checking for the latest version of $repo..."
 	current_release=$(gum -v | cut -d ' ' -f 3)
-	latest_release=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
+	latest_release=$(curl -s https://api.github.com/repos/$repo/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
 	if [ "$current_release" = "$latest_release" ]; then
-		gum style --bold --foreground $yellow --border-foreground $blue --border double --padding "0 1" --align center "Gum is already on the latest version"
+		gum style --bold --foreground $yellow --border-foreground $blue --border double --padding "0 1" --align center "$repo is already on the latest version"
 		return
 	fi
-	echo "Downloading gum..."
+	echo "Downloading $repo..."
 	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
-	wget -q --show-progress https://github.com/charmbracelet/gum/releases/download/$latest_release/$gum_latest_release.tar.gz
+	wget -q --show-progress https://github.com/$repo/releases/download/$latest_release/$gum_latest_release.tar.gz
 	tar -xzf $gum_latest_release.tar.gz
 	rm $HOME/.local/bin/gum
 	mv $gum_latest_release/gum $HOME/.local/bin
 	rm -rf $gum_latest_release.tar.gz $gum_latest_release
-	echo "Run the script again to use the updated version of gum"
-	exit
+	echo "$repo successfully updated"
 }
+back() { true; }
 main() {
 	while true; do
-		# --no-limit implementation TO-DO
-		REPLY=$(gum choose mode install_command install_gnome_extensions install_oh_my_zsh install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings adding_alias setting_default_shell install_docker update_gum about exit_script)
+		REPLY=$(gum choose test mode shell vscode install_command install_gnome_extensions install_docker system update_gum about exit_script)
 		case $REPLY in
 			mode)
 				break
 				;;
+			vscode)
+				REPLY=$(gum choose install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
+				;;
+			shell)
+				REPLY=$(gum choose install_oh_my_zsh adding_alias setting_default_shell back)
+				;;
+			system)
+				REPLY=$(gum choose install_edge system_update install_extras remove_poweroff_countdown setup_tlp back)
+				;;
 			about)
 				open https://github.com/andrexandre/script > /dev/null
+				continue
 				;;
-			*)
-				$REPLY
 		esac
+		$REPLY
 	done
 }
+
 main
 check_installed_programs
 echo mode root: $ROOT
