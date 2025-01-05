@@ -83,28 +83,31 @@ check_installed_programs() {
 }
 install_command() {
 	if [ -z "$1" ]; then
-		set -- "$(gum input --placeholder "Enter the program to install:")"
+		CMD=$(gum input --placeholder "Enter the program to install:")
 		if [ -z "$1" ]; then
 			return
 		fi
+	else
+		CMD=$1
 	fi
-	if ! command -v $1 &> /dev/null; then
-		if ! apt-cache policy $1 | grep -q 'Installed: (none)'; then
-			echo "The package $1 doesn't exist"
+	
+	if ! command -v $CMD &> /dev/null; then
+		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
+			echo "The package $CMD doesn't exist"
 			return 1
 		fi
 		if [ "$ROOT" = 'y' ]; then
-			sudo apt-get install -y $1
+			sudo apt-get install -y $CMD
 		else
 			gum confirm "Are you sure you want to install a program without root?" && true || return
-			apt-get download $1
-			dpkg -x $1*.deb /tmp/command
-			rm $1*.deb
-			cp /tmp/command/usr/bin/$1 $HOME/.local/bin
+			apt-get download $CMD
+			dpkg -x $CMD*.deb /tmp/command
+			rm $CMD*.deb
+			cp /tmp/command/usr/bin/$CMD $HOME/.local/bin
 			rm -rf /tmp/command
 		fi
 	else
-		echo "$1 is already installed"
+		echo "$CMD is already installed"
 	fi
 }
 # Configurating extensions
@@ -279,14 +282,28 @@ update_gum() {
 	rm -rf $gum_latest_release.tar.gz $gum_latest_release
 	echo "$repo successfully updated"
 }
+mode() {
+	check_installed_programs
+	echo mode root: $ROOT
+	gum confirm "Do you want to continue?" && true || exit_script
+	install_gnome_extensions
+	install_oh_my_zsh
+	if [ "$ROOT" = 'y' ]; then
+		install_vscode_root
+	else
+		install_vscode_rootless
+	fi
+	install_vscode_extensions
+	configure_vscode_settings
+	adding_alias
+	setting_default_shell
+	exit_script
+}
 back() { true; }
 main() {
 	while true; do
 		REPLY=$(gum choose test mode shell vscode install_command install_gnome_extensions install_docker system update_gum about exit_script)
 		case $REPLY in
-			mode)
-				break
-				;;
 			vscode)
 				REPLY=$(gum choose install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
 				;;
@@ -306,18 +323,3 @@ main() {
 }
 
 main
-check_installed_programs
-echo mode root: $ROOT
-gum confirm "Do you want to continue?" && true || exit_script
-install_gnome_extensions
-install_oh_my_zsh
-if [ "$ROOT" = 'y' ]; then
-	install_vscode_root
-else
-	install_vscode_rootless
-fi
-install_vscode_extensions
-configure_vscode_settings
-adding_alias
-setting_default_shell
-exit_script
