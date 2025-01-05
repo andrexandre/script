@@ -84,13 +84,12 @@ check_installed_programs() {
 install_command() {
 	if [ -z "$1" ]; then
 		CMD=$(gum input --placeholder "Enter the program to install:")
-		if [ -z "$1" ]; then
+		if [ -z "$CMD" ]; then
 			return
 		fi
 	else
 		CMD=$1
 	fi
-	
 	if ! command -v $CMD &> /dev/null; then
 		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
 			echo "The package $CMD doesn't exist"
@@ -202,9 +201,7 @@ EOF
 }
 install_docker() {
 	# Alternative way to install docker
-	# curl -fsSL https://get.docker.com -o install-docker.sh
-	# sudo sh install-docker.sh
-	# rm install-docker.sh
+	# curl -fsSL https://get.docker.com | sudo sh
 	if [ -f /bin/docker ]; then
 		echo "Docker is already installed"
 	else
