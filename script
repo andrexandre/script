@@ -285,7 +285,7 @@ mode() {
 back() { true; }
 main() {
 	while true; do
-		REPLY=$(gum choose test mode shell vscode install_command install_gnome_extensions install_docker system update_gum about exit_script)
+		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker system update_gum about exit_script)
 		case $REPLY in
 			vscode)
 				REPLY=$(gum choose install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
