@@ -135,8 +135,10 @@ install_oh_my_zsh() {
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
+	# sudo apt install vscode.deb
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
-	sudo apt install vscode.deb
+	sudo dpkg -i vscode.deb
+	sudo apt-get install -f
 	rm vscode.deb
 }
 install_vscode_rootless() {
@@ -200,31 +202,12 @@ EOF
 	sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
 }
 install_docker() {
-	# Alternative way to install docker
-	# curl -fsSL https://get.docker.com | sudo sh
-	if [ -f /bin/docker ]; then
-		echo "Docker is already installed"
-	else
-		for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
-		
-		# Add Docker's official GPG key:
-		sudo apt-get update
-		sudo apt-get install ca-certificates curl
-		sudo install -m 0755 -d /etc/apt/keyrings
-		sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-		sudo chmod a+r /etc/apt/keyrings/docker.asc
-		# Add the repository to Apt sources:
-		echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-		$(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-		sudo apt-get update
-
-		sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-		sudo groupadd docker
-		sudo usermod -aG docker $USER
-		newgrp docker
-		docker run hello-world
-	fi
+	curl -fsSL https://get.docker.com | sudo sh
+	# setup docker execution without sudo
+	sudo groupadd docker
+	sudo usermod -aG docker $USER
+	newgrp docker
+	docker run hello-world
 }
 setting_default_shell() {
 	if [ "$SHELL" != '/usr/bin/zsh' ]; then
