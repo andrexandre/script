@@ -54,9 +54,9 @@ gum style --bold --width 40 --border double --padding "1 2" --align center "Welc
 if [[ ! $SHELL = */zsh ]]; then
 	gum style --bold --foreground 0 "This script may not work with bash as default shell"
 fi
-gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 
 check_installed_programs() {
+	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 	cmds=("zsh" "git")
 	for cmd in "${cmds[@]}"; do
 		if command -v $cmd &> /dev/null; then
@@ -95,6 +95,7 @@ install_command() {
 			echo "The package $CMD doesn't exist"
 			return 1
 		fi
+		gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 		if [ "$ROOT" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
@@ -210,6 +211,7 @@ install_docker() {
 	docker run hello-world
 }
 setting_default_shell() {
+	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 	if [ "$SHELL" != '/usr/bin/zsh' ]; then
 		if [ "$ROOT" = 'y' ]; then
 			chsh -s $(which zsh)
@@ -263,6 +265,7 @@ update_gum() {
 	echo "$repo successfully updated"
 }
 mode() {
+	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 	check_installed_programs
 	echo mode root: $ROOT
 	gum confirm "Do you want to continue?" && true || exit_script
