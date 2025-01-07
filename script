@@ -136,7 +136,6 @@ install_oh_my_zsh() {
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
-	# sudo apt install vscode.deb
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
 	sudo dpkg -i vscode.deb
 	sudo apt-get install -f
@@ -225,7 +224,8 @@ setting_default_shell() {
 install_edge() {
 	latest_version=$(curl -s https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
 	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
-	sudo apt install edge.deb
+	sudo dpkg -i edge.deb
+	sudo apt-get install -f
 	rm edge.deb
 }
 system_update() {
@@ -285,7 +285,7 @@ mode() {
 back() { true; }
 main() {
 	while true; do
-		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker system update_gum about exit_script)
+		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker system about exit_script)
 		case $REPLY in
 			vscode)
 				REPLY=$(gum choose install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
@@ -294,7 +294,7 @@ main() {
 				REPLY=$(gum choose install_oh_my_zsh adding_alias setting_default_shell back)
 				;;
 			system)
-				REPLY=$(gum choose install_edge system_update install_extras remove_poweroff_countdown setup_tlp back)
+				REPLY=$(gum choose install_edge system_update install_extras remove_poweroff_countdown setup_tlp update_gum back)
 				;;
 			about)
 				open https://github.com/andrexandre/script > /dev/null
