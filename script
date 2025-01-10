@@ -20,12 +20,7 @@ if [ "$EUID" -eq 0 ]; then
 	exit 1
 fi
 [ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-	export PATH="$HOME/.local/bin:$PATH"
-fi
-# if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' $HOME/.zshrc; then
-# 	echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
-# fi
+[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 if [ "$1" == "--debug" ]; then
 	TEMP_DIR=$(echo debugging) ; mkdir $TEMP_DIR
 fi
@@ -51,9 +46,6 @@ if ! command -v gum &> /dev/null; then
 fi
 
 gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
-if [[ ! $SHELL = */zsh ]]; then
-	gum style --bold --foreground 0 "This script may not work with bash as default shell"
-fi
 
 check_installed_programs() {
 	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
@@ -73,9 +65,9 @@ check_installed_programs() {
 	fi
 	if [ -f $HOME/.zshrc ]; then
 		if grep -q "My custom aliases" $HOME/.zshrc; then
-			echo -e "✅ aliases are added"
+			echo -e "✅ aliases on .zshrc are added"
 		else
-			echo -e "❌ aliases aren't added"
+			echo -e "❌ aliases on .zshrc aren't added"
 		fi
 	else
 		echo -e "❌ there's no .zshrc file"
@@ -101,10 +93,10 @@ install_command() {
 		else
 			gum confirm "Are you sure you want to install a program without root?" && true || return
 			apt-get download $CMD
-			dpkg -x $CMD*.deb /tmp/command
+			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
-			cp /tmp/command/usr/bin/$CMD $HOME/.local/bin
-			rm -rf /tmp/command
+			cp $TEMP_DIR/$CMD/usr/bin/$CMD $HOME/.local/bin
+			rm -rf $TEMP_DIR/$CMD
 		fi
 	else
 		echo "$CMD is already installed"
@@ -112,14 +104,13 @@ install_command() {
 }
 # Configurating extensions
 install_gnome_extensions() {
-	# sudo apt-get install -y chrome-gnome-shell # needed to install extensions
-	# sudo apt-get install -y gnome-shell-extensions # maybe it is the extensions manager gui, idk
-	# sudo apt-get install -y gnome-shell-extension-manager # for sure it is the extensions manager
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
+		cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
 		wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 		firefox gnome_shell_integration-12.xpi
 		gum confirm "Have you clicked [Add] on firefox?" && true || return
 		rm gnome_shell_integration-12.xpi
+		cd -
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
 		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
@@ -174,8 +165,9 @@ EOF
 	fi
 }
 adding_alias() {
+	gum confirm "Do you want to add aliases to .zshrc?" && true || return
 	if grep -q "My custom aliases" $HOME/.zshrc; then
-		echo aliases already added
+		echo aliases on .zshrc already added
 		return
 	fi
 	echo adding aliases to .zshrc
@@ -183,6 +175,7 @@ adding_alias() {
 #My custom aliases
 alias fgit='find . -type d -name ".git"'
 alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
+alias subm_to_main="git submodule foreach 'git checkout main || true' ; git submodule foreach 'git checkout main master || true'"
 c() {
 	if [ -z "$1" ]; then
 		$VSCODE_PATH/vscode/bin/code .
@@ -203,19 +196,21 @@ EOF
 }
 install_docker() {
 	curl -fsSL https://get.docker.com | sudo sh
-	# setup docker execution without sudo
+	# setup docker without sudo
 	sudo groupadd docker
 	sudo usermod -aG docker $USER
 	newgrp docker
 	docker run hello-world
 }
 setting_default_shell() {
+	gum confirm "Do you want to set zsh as default shell?" && true || return
 	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 	if [ "$SHELL" != '/usr/bin/zsh' ]; then
 		if [ "$ROOT" = 'y' ]; then
 			chsh -s $(which zsh)
 		else
-			echo exec /bin/zsh > $HOME/.bashrc
+			echo 'export SHELL=`which zsh`' >> $HOME/.bashrc
+			echo '[ -z "$ZSH_VERSION" ] && exec "$SHELL" -l' >> $HOME/.bashrc
 		fi
 	else
 		echo default shell is already $SHELL
@@ -232,7 +227,8 @@ system_update() {
 	sudo apt-get update && sudo apt-get upgrade -y
 }
 install_extras() {
-	sudo apt-get install -y dconf gnome-tweaks build-essential ubuntu-restricted-extras
+	# build-essential has: gcc, g++, make, etc... and ubuntu-extras has codecs
+	sudo apt-get install -y gnome-tweaks build-essential ubuntu-restricted-extras
 }
 remove_poweroff_countdown() {
 	gsettings set org.gnome.SessionManager logout-prompt false
@@ -240,6 +236,9 @@ remove_poweroff_countdown() {
 setup_tlp() {
 	sudo apt-get install -y tlp tlp-rdw
 	sudo systemctl enable tlp
+}
+about() {
+	open https://github.com/andrexandre/script > /dev/null	
 }
 exit_script() {
 	cd - > /dev/null
@@ -264,11 +263,14 @@ update_gum() {
 	rm -rf $gum_latest_release.tar.gz $gum_latest_release
 	echo "$repo successfully updated"
 }
+show_script() {
+	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | more
+}
 mode() {
 	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
 	check_installed_programs
 	echo mode root: $ROOT
-	gum confirm "Do you want to continue?" && true || exit_script
+	gum confirm "Do you want to continue?" && true || return
 	install_gnome_extensions
 	install_oh_my_zsh
 	if [ "$ROOT" = 'y' ]; then
@@ -285,7 +287,7 @@ mode() {
 back() { true; }
 main() {
 	while true; do
-		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker system about exit_script)
+		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker others show_script exit_script)
 		case $REPLY in
 			vscode)
 				REPLY=$(gum choose install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
@@ -293,12 +295,8 @@ main() {
 			shell)
 				REPLY=$(gum choose install_oh_my_zsh adding_alias setting_default_shell back)
 				;;
-			system)
-				REPLY=$(gum choose install_edge system_update install_extras remove_poweroff_countdown setup_tlp update_gum back)
-				;;
-			about)
-				open https://github.com/andrexandre/script > /dev/null
-				continue
+			others)
+				REPLY=$(gum choose install_edge system_update install_extras remove_poweroff_countdown setup_tlp update_gum about back)
 				;;
 		esac
 		$REPLY
