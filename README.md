@@ -17,7 +17,7 @@ curl -sL andrexandre.github.io | sh
 > -s = silent, -L = automatically follow the redirect
 
 > [!IMPORTANT]
-> Certain features may not function properly unless zsh is the default shell or a Debian-based distribution is used
+> Certain features may not function properly a Debian-based distribution is used
 
 > [!NOTE]
 > To view or download the script, visit the [script](script) file on GitHub

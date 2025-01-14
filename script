@@ -1,17 +1,20 @@
 #!/bin/bash
 
 # color styling variables
-blue=220
-yellow=27
-export FOREGROUND=$blue
-export BORDER_FOREGROUND=$yellow
-export GUM_CONFIRM_PROMPT_FOREGROUND=$blue
-export GUM_CONFIRM_SELECTED_BACKGROUND=$yellow
-export GUM_INPUT_PROMPT_FOREGROUND=$blue
-export GUM_INPUT_CURSOR_FOREGROUND=$yellow
-export GUM_CHOOSE_HEADER_FOREGROUND=$blue
-export GUM_CHOOSE_SELECTED_FOREGROUND=$yellow
-export GUM_CHOOSE_CURSOR_FOREGROUND=$yellow
+blue=27
+yellow=220
+export FOREGROUND=$yellow
+export BORDER_FOREGROUND=$blue
+export GUM_CONFIRM_PROMPT_FOREGROUND=$yellow
+export GUM_CONFIRM_SELECTED_BACKGROUND=$blue
+export GUM_INPUT_PROMPT_FOREGROUND=$yellow
+export GUM_INPUT_CURSOR_FOREGROUND=$blue
+export GUM_CHOOSE_HEADER_FOREGROUND=$yellow
+export GUM_CHOOSE_SELECTED_FOREGROUND=$blue
+export GUM_CHOOSE_CURSOR_FOREGROUND=$blue
+export GUM_PAGER_BORDER_FOREGROUND=$blue
+export GUM_PAGER_MATCH_FOREGROUND=$yellow
+export GUM_PAGER_MATCH_HIGH_BACKGROUND=$yellow
 VSCODE_PATH=$HOME/Documents
 
 # checking if the user is root and ~/.local/bin is in PATH
@@ -45,11 +48,8 @@ if ! command -v gum &> /dev/null; then
 	rm -rf $latest_release_name.tar.gz $latest_release_name
 fi
 
-gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
-
 check_installed_programs() {
-	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
-	cmds=("zsh" "git")
+	cmds=("zsh" "git") # code
 	for cmd in "${cmds[@]}"; do
 		if command -v $cmd &> /dev/null; then
 			echo -e "✅ $cmd is installed"
@@ -62,15 +62,6 @@ check_installed_programs() {
 		echo -e "✅ code is installed"
 	else
 		echo -e "❌ code isn't installed"
-	fi
-	if [ -f $HOME/.zshrc ]; then
-		if grep -q "My custom aliases" $HOME/.zshrc; then
-			echo -e "✅ aliases on .zshrc are added"
-		else
-			echo -e "❌ aliases on .zshrc aren't added"
-		fi
-	else
-		echo -e "❌ there's no .zshrc file"
 	fi
 }
 install_command() {
@@ -104,13 +95,16 @@ install_command() {
 }
 # Configurating extensions
 install_gnome_extensions() {
+	if ! command -v chrome-gnome-shell &> /dev/null; then
+		sudo apt-get install -y chrome-gnome-shell
+	fi
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
 		cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
 		wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 		firefox gnome_shell_integration-12.xpi
 		gum confirm "Have you clicked [Add] on firefox?" && true || return
 		rm gnome_shell_integration-12.xpi
-		cd -
+		cd - > /dev/null
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
 		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
@@ -166,6 +160,7 @@ EOF
 }
 adding_alias() {
 	gum confirm "Do you want to add aliases to .zshrc?" && true || return
+	# verify is zsh is installed
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases on .zshrc already added
 		return
@@ -175,7 +170,7 @@ adding_alias() {
 #My custom aliases
 alias fgit='find . -type d -name ".git"'
 alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
-alias subm_to_main="git submodule foreach 'git checkout main || true' ; git submodule foreach 'git checkout main master || true'"
+alias subm_to_main="git submodule foreach 'git checkout main -q 2>/dev/null || git checkout master -q 2>/dev/null'"
 c() {
 	if [ -z "$1" ]; then
 		$VSCODE_PATH/vscode/bin/code .
@@ -205,6 +200,7 @@ install_docker() {
 setting_default_shell() {
 	gum confirm "Do you want to set zsh as default shell?" && true || return
 	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
+	# verify is zsh is installed
 	if [ "$SHELL" != '/usr/bin/zsh' ]; then
 		if [ "$ROOT" = 'y' ]; then
 			chsh -s $(which zsh)
@@ -217,6 +213,7 @@ setting_default_shell() {
 	fi
 }
 install_edge() {
+	# if no: microsoft-edge
 	latest_version=$(curl -s https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
 	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
 	sudo dpkg -i edge.deb
@@ -251,7 +248,7 @@ update_gum() {
 	current_release=$(gum -v | cut -d ' ' -f 3)
 	latest_release=$(curl -s https://api.github.com/repos/$repo/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
 	if [ "$current_release" = "$latest_release" ]; then
-		gum style --bold --foreground $yellow --border-foreground $blue --border double --padding "0 1" --align center "$repo is already on the latest version"
+		gum style --bold --foreground $blue --border-foreground $yellow --border double --padding "0 1" --align center "$repo is already on the latest version"
 		return
 	fi
 	echo "Downloading $repo..."
@@ -264,7 +261,7 @@ update_gum() {
 	echo "$repo successfully updated"
 }
 show_script() {
-	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | more
+	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | gum pager
 }
 mode() {
 	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
@@ -286,6 +283,7 @@ mode() {
 }
 back() { true; }
 main() {
+	gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
 	while true; do
 		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker others show_script exit_script)
 		case $REPLY in
@@ -302,5 +300,51 @@ main() {
 		$REPLY
 	done
 }
-
+# export DEBUG=y
+if [ -n "$DEBUG" ]; then
+	# [ -t 0 ] && interactive=y
+	# if [ -z $interactive ]; then
+	# wget -q https://gist.githubusercontent.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907/raw/31861092b3b176a50a6680e1ecc18469b12bc22e/test.sh
+	# bash test.sh
+	# rm test.sh
+	# exit
+	# list=check_installed_programs
+	# ROOT=$1
+	# $list
+	echo "Using \$0: $0"
+	echo "Using \${BASH_SOURCE[0]}: ${BASH_SOURCE[0]}"
+	echo "Using \$PWD: $PWD"
+	if [ -n "${BASH_SOURCE[0]}" ]; then
+		echo "Running interactively by {BASH_SOURCE[0]}"
+	else
+		echo "Running non-          by {BASH_SOURCE[0]}"
+	fi
+	if [ -t 0 ]; then
+		echo "Running interactively by -t 0"
+	else
+		echo "Running non-          by -t 0"
+	fi
+	if [ -n "$PS1" ]; then
+		echo "Running interactively by PS1"
+	else
+		echo "Running non-          by PS1"
+	fi
+	if [ -p /dev/stdin ]; then
+		echo "Running interactively by /dev/stdin"
+	else
+		echo "Running non-          by /dev/stdin"
+	fi
+	if [[ $- == *i* ]]; then
+		echo "Running interactively by $- == *i*"
+	else
+		echo "Running non-          by $- == *i*"
+	fi
+	parent_process=$(ps -o comm= $PPID)
+	if [[ "$parent_process" == "bash" || "$parent_process" == "zsh" ]]; then
+		echo "Running interactively by overkill"
+	else
+		echo "Running non-interactively by overkill"
+	fi
+	exit
+fi
 main
