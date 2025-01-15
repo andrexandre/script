@@ -3,18 +3,21 @@
 # color styling variables
 blue=27
 yellow=220
-export FOREGROUND=$yellow
-export BORDER_FOREGROUND=$blue
-export GUM_CONFIRM_PROMPT_FOREGROUND=$yellow
-export GUM_CONFIRM_SELECTED_BACKGROUND=$blue
-export GUM_INPUT_PROMPT_FOREGROUND=$yellow
-export GUM_INPUT_CURSOR_FOREGROUND=$blue
-export GUM_CHOOSE_HEADER_FOREGROUND=$yellow
-export GUM_CHOOSE_SELECTED_FOREGROUND=$blue
-export GUM_CHOOSE_CURSOR_FOREGROUND=$blue
-export GUM_PAGER_BORDER_FOREGROUND=$blue
-export GUM_PAGER_MATCH_FOREGROUND=$yellow
-export GUM_PAGER_MATCH_HIGH_BACKGROUND=$yellow
+update_styling_variables() {
+	export FOREGROUND=$yellow
+	export BORDER_FOREGROUND=$blue
+	export GUM_CHOOSE_HEADER_FOREGROUND=$yellow
+	export GUM_CHOOSE_SELECTED_FOREGROUND=$blue
+	export GUM_CHOOSE_CURSOR_FOREGROUND=$blue
+	export GUM_CONFIRM_PROMPT_FOREGROUND=$yellow
+	export GUM_CONFIRM_SELECTED_BACKGROUND=$blue
+	export GUM_INPUT_PROMPT_FOREGROUND=$yellow
+	export GUM_INPUT_CURSOR_FOREGROUND=$blue
+	export GUM_PAGER_BORDER_FOREGROUND=$blue
+	export GUM_PAGER_MATCH_FOREGROUND=$yellow
+	export GUM_PAGER_MATCH_HIGH_BACKGROUND=$yellow
+}
+update_styling_variables
 VSCODE_PATH=$HOME/Documents
 
 # checking if the user is root and $HOME/.local/bin is in PATH
@@ -274,11 +277,16 @@ mode() {
 	setting_default_shell
 	exit_script
 }
-back() { true; }
+view_code() {
+	curl -sO https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script
+	name="$1"
+	awk "/^${name}\(\) {/,/}/" script | gum pager
+	rm script
+}
 main() {
 	gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
 	while true; do
-		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker others show_script exit_script)
+		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker others show_script $view_code_name exit_script)
 		case $REPLY in
 			vscode)
 				REPLY=$(gum choose install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
@@ -289,8 +297,16 @@ main() {
 			others)
 				REPLY=$(gum choose install_edge system_update install_extras remove_poweroff_countdown setup_tlp update_gum about back)
 				;;
+			$view_code_name)
+				[ "$view_code_name" = "enable_view_code" ] && blue=46 || blue=27
+				[ "$view_code_name" = "enable_view_code" ] && view_code_name=disable_view_code || view_code_name=enable_view_code
+				update_styling_variables
+				continue
+				;;
 		esac
-		$REPLY
+		[ "$REPLY" = "back" ] && continue
+		[ "$REPLY" = "exit_script" ] && exit_script
+		[ "$view_code_name" = "enable_view_code" ] && $REPLY || view_code "$REPLY"
 	done
 }
 # toggle debug mode by doing: export DEBUG=y/unset DEBUG
@@ -302,6 +318,7 @@ if [ "$DEBUG" ]; then
 fi
 [ -z "$root" ] && root=n
 if [ -z "$list" ]; then
+	view_code_name=enable_view_code
 	main
 else
 	[ "$arg" ] && list=$(echo "$list" | tr ' ' '\n')
