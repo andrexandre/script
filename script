@@ -117,8 +117,9 @@ install_oh_my_zsh() {
 }
 install_vscode_root() {
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+	echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
 	sudo dpkg -i vscode.deb
-	sudo apt-get install -f
+	sudo apt-get install -f -y
 	rm vscode.deb
 }
 install_vscode_rootless() {
