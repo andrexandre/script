@@ -86,30 +86,28 @@ install_command() {
 			rm -rf $TEMP_DIR/$CMD
 			# to remove all, get the cmds from 'ls $CMD/usr/bin/*' and cd $HOME/.local/bin ; rm $cmds
 		fi
-	else
+	elif [ -z "$list" ]; then
 		echo "$CMD is already installed"
 	fi
 }
 # Configurating extensions
 install_gnome_extensions() {
-	if ! command -v chrome-gnome-shell &> /dev/null; then
-		sudo apt-get install -y chrome-gnome-shell
-	fi
+	install_command chrome-gnome-shell
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
+		gum confirm "After clicking [Add]/[Allow], close firefox?" && true || return
 		cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
 		wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 		firefox gnome_shell_integration-12.xpi
-		gum confirm "Have you clicked [Add] on firefox?" && true || return
 		rm gnome_shell_integration-12.xpi
 		cd - > /dev/null
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
+		gum confirm "After clicking [ON]/[Install], close firefox?" && true || return
 		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
-		gum confirm "Have you turned [ON] and clicked [Install]?" && true || return
 	fi
 	if ! gnome-extensions list --enabled | grep -q clipboard-indicator; then
+		gum confirm "After clicking [ON]/[Install], close firefox?" && true || return
 		firefox https://extensions.gnome.org/extension/779/clipboard-indicator/
-		gum confirm "Have you turned [ON] and clicked [Install]?" && true || return
 	fi
 }
 install_oh_my_zsh() {
@@ -164,6 +162,7 @@ adding_alias() {
 	fi
 	echo adding aliases to .zshrc
 	cat << 'EOF' >> $HOME/.zshrc
+[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 #My custom aliases
 alias fgit='find . -type d -name ".git"'
 alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
