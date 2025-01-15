@@ -21,8 +21,7 @@ test:
 	curl -sL andrexandre.github.io | sh
 
 debug:
-	@./$(NAME) --debug
-	@ls /tmp/tmp*
+	export DEBUG=y ; ./$(NAME)
 
 start-server:
 	python -m http.server 8000 > /dev/null 2>&1 &

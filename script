@@ -17,21 +17,19 @@ export GUM_PAGER_MATCH_FOREGROUND=$yellow
 export GUM_PAGER_MATCH_HIGH_BACKGROUND=$yellow
 VSCODE_PATH=$HOME/Documents
 
-# checking if the user is root and ~/.local/bin is in PATH
-if [ "$EUID" -eq 0 ]; then
-	echo "Please do not run as root"
-	exit 1
-fi
+# checking if the user is root and $HOME/.local/bin is in PATH
+[ "$EUID" -eq 0 ] && (echo "Please do not run as root" ; exit 1)
 [ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
 [[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
-if [ "$1" == "--debug" ]; then
+
+if [ "$DEBUG" ]; then
 	TEMP_DIR=$(echo debugging) ; mkdir $TEMP_DIR
+else
+	TEMP_DIR=$(mktemp -d)
 fi
-# Create a temporary directory and enter into it
-TEMP_DIR=$(mktemp -d)
 if [ ! -d "$TEMP_DIR" ]; then
 	echo "Failed to create temp directory, going home"
-	cd ~
+	cd $HOME
 else
 	cd $TEMP_DIR
 fi
@@ -57,8 +55,8 @@ check_installed_programs() {
 			echo -e "❌ $cmd isn't installed"
 		fi
 	done
-	if ([ "$ROOT" = 'y' ] && command -v code &> /dev/null) ||
-		([ "$ROOT" = 'n' ] && [ -d $VSCODE_PATH/vscode ]); then
+	if ([ "$root" = 'y' ] && command -v code &> /dev/null) ||
+		([ "$root" = 'n' ] && [ -d $VSCODE_PATH/vscode ]); then
 		echo -e "✅ code is installed"
 	else
 		echo -e "❌ code isn't installed"
@@ -67,27 +65,26 @@ check_installed_programs() {
 install_command() {
 	if [ -z "$1" ]; then
 		CMD=$(gum input --placeholder "Enter the program to install:")
-		if [ -z "$CMD" ]; then
-			return
-		fi
+		[ -z "$CMD" ] && return
 	else
 		CMD=$1
 	fi
 	if ! command -v $CMD &> /dev/null; then
 		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
 			echo "The package $CMD doesn't exist"
-			return 1
+			return
 		fi
-		gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
-		if [ "$ROOT" = 'y' ]; then
+		[ -z "$list" ] && gum confirm "Do you have root privileges?" && root='y' || root='n'
+		if [ "$root" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
-			gum confirm "Are you sure you want to install a program without root?" && true || return
+			[ -z "$list" ] && (gum confirm "Are you sure you want to install a program without root?" && true || return)
 			apt-get download $CMD
 			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
-			cp $TEMP_DIR/$CMD/usr/bin/$CMD $HOME/.local/bin
+			cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
 			rm -rf $TEMP_DIR/$CMD
+			# to remove all, get the cmds from 'ls $CMD/usr/bin/*' and cd $HOME/.local/bin ; rm $cmds
 		fi
 	else
 		echo "$CMD is already installed"
@@ -135,13 +132,13 @@ install_vscode_rootless() {
 	ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/code
 }
 install_vscode_extensions() {
-	code --install-extension mhutchie.git-graph
 	code --install-extension ms-vscode.cpptools
 	code --install-extension github.copilot
+	code --install-extension ritwickdey.liveserver
 }
 export CODESETTINGSFILE=$HOME/.config/Code/User/settings.json
 configure_vscode_settings() {
-	if [ ! -f $CODESETTINGSFILE ]; then
+	if [ ! -f "$CODESETTINGSFILE" ]; then
 		echo creating settings.json
 		[ -d "$HOME/.config/Code/User" ] || mkdir -p "$HOME/.config/Code/User"
 		cat << 'EOF' >> $CODESETTINGSFILE
@@ -199,10 +196,10 @@ install_docker() {
 }
 setting_default_shell() {
 	gum confirm "Do you want to set zsh as default shell?" && true || return
-	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
+	gum confirm "Do you have root privileges?" && root='y' || root='n'
 	# verify is zsh is installed
 	if [ "$SHELL" != '/usr/bin/zsh' ]; then
-		if [ "$ROOT" = 'y' ]; then
+		if [ "$root" = 'y' ]; then
 			chsh -s $(which zsh)
 		else
 			echo 'export SHELL=`which zsh`' >> $HOME/.bashrc
@@ -235,7 +232,7 @@ setup_tlp() {
 	sudo systemctl enable tlp
 }
 about() {
-	open https://github.com/andrexandre/script > /dev/null	
+	open https://github.com/andrexandre/script > /dev/null
 }
 exit_script() {
 	cd - > /dev/null
@@ -264,17 +261,13 @@ show_script() {
 	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | gum pager
 }
 mode() {
-	gum confirm "Do you have root privileges?" && ROOT='y' || ROOT='n'
+	gum confirm "Do you have root privileges?" && root='y' || root='n'
 	check_installed_programs
-	echo mode root: $ROOT
+	echo mode root: $root
 	gum confirm "Do you want to continue?" && true || return
 	install_gnome_extensions
 	install_oh_my_zsh
-	if [ "$ROOT" = 'y' ]; then
-		install_vscode_root
-	else
-		install_vscode_rootless
-	fi
+	[ "$root" = 'y' ] && install_vscode_root || install_vscode_rootless
 	install_vscode_extensions
 	configure_vscode_settings
 	adding_alias
@@ -300,51 +293,20 @@ main() {
 		$REPLY
 	done
 }
-# export DEBUG=y
-if [ -n "$DEBUG" ]; then
-	# [ -t 0 ] && interactive=y
-	# if [ -z $interactive ]; then
-	# wget -q https://gist.githubusercontent.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907/raw/31861092b3b176a50a6680e1ecc18469b12bc22e/test.sh
-	# bash test.sh
-	# rm test.sh
-	# exit
-	# list=check_installed_programs
-	# ROOT=$1
-	# $list
-	echo "Using \$0: $0"
-	echo "Using \${BASH_SOURCE[0]}: ${BASH_SOURCE[0]}"
-	echo "Using \$PWD: $PWD"
-	if [ -n "${BASH_SOURCE[0]}" ]; then
-		echo "Running interactively by {BASH_SOURCE[0]}"
-	else
-		echo "Running non-          by {BASH_SOURCE[0]}"
-	fi
-	if [ -t 0 ]; then
-		echo "Running interactively by -t 0"
-	else
-		echo "Running non-          by -t 0"
-	fi
-	if [ -n "$PS1" ]; then
-		echo "Running interactively by PS1"
-	else
-		echo "Running non-          by PS1"
-	fi
-	if [ -p /dev/stdin ]; then
-		echo "Running interactively by /dev/stdin"
-	else
-		echo "Running non-          by /dev/stdin"
-	fi
-	if [[ $- == *i* ]]; then
-		echo "Running interactively by $- == *i*"
-	else
-		echo "Running non-          by $- == *i*"
-	fi
-	parent_process=$(ps -o comm= $PPID)
-	if [[ "$parent_process" == "bash" || "$parent_process" == "zsh" ]]; then
-		echo "Running interactively by overkill"
-	else
-		echo "Running non-interactively by overkill"
-	fi
-	exit
+# toggle debug mode by doing: export DEBUG=y/unset DEBUG
+if [ "$DEBUG" ]; then
+	wget -q gist.github.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907/raw/test.sh
+	bash test.sh
+	rm test.sh
+	exit_script
 fi
-main
+[ -z "$root" ] && root=n
+if [ -z "$list" ]; then
+	main
+else
+	[ "$arg" ] && list=$(echo "$list" | tr ' ' '\n')
+	echo "$list" | while read -r list_item; do
+		$list_item
+	done
+	exit_script
+fi
