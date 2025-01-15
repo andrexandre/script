@@ -11,23 +11,26 @@ It has 2 modes that install everything with or without root
 
 ## Usage
 
-```
+```bash
 curl -sL andrexandre.github.io | sh
 ```
 > -s = silent, -L = automatically follow the redirect
 
-You can also run the script automatically by exporting a list of commands:
-```
+#### Its possible run automatically by exporting a list of commands:
+```bash
 export arg=n list="system_update install_docker" ; curl -sL andrexandre.github.io | sh
 ```
 > arg=n - will disable command arguments so you can stack multiple commands without newlines
 
-You can also run commands with arguments:
-```
+#### Its also possible to run commands with arguments:
+```bash
 export root=y list='install_command git
-install_command zsh' ; curl -sL andrexandre.github.io | sh
+install_command zsh
+install_oh_my_zsh' ; curl -sL andrexandre.github.io | sh
 ```
 > root=y - in this case will install the command with sudo, root=n - default
+
+<br>
 
 > [!IMPORTANT]
 > Certain features may not function properly a Debian-based distribution is used
