@@ -119,6 +119,7 @@ install_oh_my_zsh() {
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
+	command -v code &> /dev/null || (gum confirm "You have a code command, are you sure you want to continue?" && true || return)
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
 	echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
 	sudo dpkg -i vscode.deb
@@ -129,11 +130,18 @@ install_vscode_rootless() {
 	wget -q --show-progress -O VSCode-linux-x64.tgz "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64"
 	tar -xzf VSCode-linux-x64.tgz
 	rm VSCode-linux-x64.tgz
-	mv VSCode-linux-x64 vscode
-	mv vscode $VSCODE_PATH
-	ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/code
+	mv VSCode-linux-x64 $VSCODE_PATH/vscode
+	if command -v code; then
+		ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/vscode
+		echo \'code\' command exists, created symlink named vscode
+		echo to change the name of the symlink, run the following command:
+		echo "mv $HOME/.local/bin/vscode $HOME/.local/bin/<link_name>"
+	else
+		ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/code
+	fi
 }
 install_vscode_extensions() {
+	command -v code &> /dev/null || (echo no code command found ; return)
 	code --install-extension ms-vscode.cpptools
 	code --install-extension github.copilot
 	code --install-extension ritwickdey.liveserver
@@ -164,20 +172,12 @@ adding_alias() {
 		echo aliases on .zshrc already added
 		return
 	fi
-	echo adding aliases to .zshrc
 	cat << 'EOF' >> $HOME/.zshrc
 [[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 #My custom aliases
 alias fgit='find . -type d -name ".git"'
 alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
 alias subm_to_main="git submodule foreach 'git checkout main -q 2>/dev/null || git checkout master -q 2>/dev/null'"
-c() {
-	if [ -z "$1" ]; then
-		$VSCODE_PATH/vscode/bin/code .
-	else
-		$VSCODE_PATH/vscode/bin/code $1
-	fi
-}
 gacp() {
 	if [ -z "$1" ]; then
 		git add . && git commit -m "Update" && git push
@@ -246,12 +246,19 @@ update_gum() {
 	repo=charmbracelet/gum
 	echo "Checking for the latest version of $repo..."
 	current_release=$(gum -v | cut -d ' ' -f 3)
+	# For testing use curl -so ...
+	# curl -so latest.json https://api.github.com/repos/$repo/releases/latest
+	# curl -so releases.json https://api.github.com/repos/$repo/releases
+	# request=$(curl -s https://api.github.com/repos/$repo/releases/latest)
+	# jq -e 'has("message") and (.message | startswith("API rate limit exceeded"))'
+	# latest_release=$(echo -E "$request" | jq -r ".tag_name")
 	latest_release=$(curl -s https://api.github.com/repos/$repo/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
 	if [ "$current_release" = "$latest_release" ]; then
 		gum style --bold --foreground $blue --border-foreground $yellow --border double --padding "0 1" --align center "$repo is already on the latest version"
 		return
 	fi
 	echo "Downloading $repo..."
+	# download_url=$(echo -E "$request" | jq -r '.assets[].browser_download_url | select(endswith("Linux_x86_64.tar.gz"))')
 	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
 	wget -q --show-progress https://github.com/$repo/releases/download/$latest_release/$gum_latest_release.tar.gz
 	tar -xzf $gum_latest_release.tar.gz

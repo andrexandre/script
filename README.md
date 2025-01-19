@@ -7,7 +7,7 @@ This script automates the installation and setup of a bunch of programs in Linux
 - Adds shell alias and sets the default shell
 - Installs Gnome shell extensions like "dash to panel" and "clipboard indicator"
 
-It has 2 modes that install everything with or without root
+<!-- Document modes -->
 
 ## Usage
 
