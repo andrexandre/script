@@ -3,19 +3,22 @@
 # color styling variables
 blue=27
 yellow=220
+green=46
+primary=$yellow
+secondary=$blue
 update_styling_variables() {
-	export FOREGROUND=$yellow
-	export BORDER_FOREGROUND=$blue
-	export GUM_CHOOSE_HEADER_FOREGROUND=$yellow
-	export GUM_CHOOSE_SELECTED_FOREGROUND=$blue
-	export GUM_CHOOSE_CURSOR_FOREGROUND=$blue
-	export GUM_CONFIRM_PROMPT_FOREGROUND=$yellow
-	export GUM_CONFIRM_SELECTED_BACKGROUND=$blue
-	export GUM_INPUT_PROMPT_FOREGROUND=$yellow
-	export GUM_INPUT_CURSOR_FOREGROUND=$blue
-	export GUM_PAGER_BORDER_FOREGROUND=$blue
-	export GUM_PAGER_MATCH_FOREGROUND=$yellow
-	export GUM_PAGER_MATCH_HIGH_BACKGROUND=$yellow
+	export FOREGROUND=$primary
+	export BORDER_FOREGROUND=$secondary
+	export GUM_CHOOSE_HEADER_FOREGROUND=$primary
+	export GUM_CHOOSE_SELECTED_FOREGROUND=$secondary
+	export GUM_CHOOSE_CURSOR_FOREGROUND=$secondary
+	export GUM_CONFIRM_PROMPT_FOREGROUND=$primary
+	export GUM_CONFIRM_SELECTED_BACKGROUND=$secondary
+	export GUM_INPUT_PROMPT_FOREGROUND=$primary
+	export GUM_INPUT_CURSOR_FOREGROUND=$secondary
+	export GUM_PAGER_BORDER_FOREGROUND=$secondary
+	export GUM_PAGER_MATCH_FOREGROUND=$primary
+	export GUM_PAGER_MATCH_HIGH_BACKGROUND=$primary
 }
 update_styling_variables
 VSCODE_PATH=$HOME/Documents
@@ -254,7 +257,7 @@ update_gum() {
 	# latest_release=$(echo -E "$request" | jq -r ".tag_name")
 	latest_release=$(curl -s https://api.github.com/repos/$repo/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
 	if [ "$current_release" = "$latest_release" ]; then
-		gum style --bold --foreground $blue --border-foreground $yellow --border double --padding "0 1" --align center "$repo is already on the latest version"
+		gum style --bold --foreground $secondary --border-foreground $primary --border double --padding "0 1" --align center "$repo is already on the latest version"
 		return
 	fi
 	echo "Downloading $repo..."
@@ -293,27 +296,29 @@ view_code() {
 main() {
 	gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
 	while true; do
-		REPLY=$(gum choose mode shell vscode install_command install_gnome_extensions install_docker others show_script $view_code_name exit_script)
+		REPLY=$(gum choose --header="$user_prompt" install_command vscode shell install_gnome_extensions install_docker others show_script $view_code_name exit_script)
 		case $REPLY in
 			vscode)
-				REPLY=$(gum choose install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
+				REPLY=$(gum choose --header="$user_prompt" install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
 				;;
 			shell)
-				REPLY=$(gum choose install_oh_my_zsh adding_alias setting_default_shell back)
+				REPLY=$(gum choose --header="$user_prompt" install_oh_my_zsh adding_alias setting_default_shell back)
 				;;
 			others)
-				REPLY=$(gum choose install_edge system_update install_extras remove_poweroff_countdown setup_tlp update_gum about back)
+				REPLY=$(gum choose --header="$user_prompt" install_edge system_update install_extras remove_poweroff_countdown setup_tlp mode update_gum about back)
 				;;
 			$view_code_name)
-				[ "$view_code_name" = "enable_view_code" ] && blue=46 || blue=27
-				[ "$view_code_name" = "enable_view_code" ] && view_code_name=disable_view_code || view_code_name=enable_view_code
+				[ "$view_code_enabled" = "n" ] && secondary=$green || secondary=$blue
+				[ "$view_code_enabled" = "n" ] && view_code_name=disable_view_code || view_code_name=enable_view_code
+				[ "$view_code_enabled" = "n" ] && user_prompt='Choose a function to see the code:' || user_prompt='Choose a function to execute:'
 				update_styling_variables
+				[ "$view_code_enabled" = "n" ] && view_code_enabled=y || view_code_enabled=n
 				continue
 				;;
 		esac
 		[ "$REPLY" = "back" ] && continue
 		[ "$REPLY" = "exit_script" ] && exit_script
-		[ "$view_code_name" = "enable_view_code" ] && $REPLY || view_code "$REPLY"
+		[ "$view_code_enabled" = "n" ] && $REPLY || view_code "$REPLY"
 	done
 }
 # toggle debug mode by doing: export DEBUG=y/unset DEBUG
@@ -324,8 +329,10 @@ if [ "$DEBUG" ]; then
 	exit_script
 fi
 [ -z "$root" ] && root=n
+view_code_enabled=n
+view_code_name=enable_view_code
+user_prompt='Choose a function to execute:'
 if [ -z "$list" ]; then
-	view_code_name=enable_view_code
 	main
 else
 	[ "$arg" ] && list=$(echo "$list" | tr ' ' '\n')
