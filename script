@@ -73,18 +73,25 @@ install_command() {
 		CMD=$(gum input --placeholder "Enter the program to install:")
 		[ -z "$CMD" ] && return
 	else
-		CMD=$1
+		[ "$list" ] && local quiet=y
+		if [ "$1" = "-q" ]; then
+			[ -z "$2" ] && { echo argument required; return; }
+			local quiet=y
+			CMD=$2
+		else
+			CMD=$1
+		fi
 	fi
 	if ! command -v $CMD &> /dev/null; then
 		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
 			echo "The package $CMD doesn't exist"
 			return
 		fi
-		[ -z "$list" ] && { gum confirm "Do you have root privileges?" && root='y' || root='n'; }
+		[ -z "$quiet" ] && { gum confirm "Do you have root privileges?" && root='y' || root='n'; }
 		if [ "$root" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
-			[ -z "$list" ] && { gum confirm "Are you sure you want to install a program without root?" || return 0; }
+			[ -z "$quiet" ] && { gum confirm "Are you sure you want to install a program without root?" || return 0; }
 			apt-get download $CMD
 			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
@@ -92,7 +99,7 @@ install_command() {
 			rm -rf $TEMP_DIR/$CMD
 			# to remove all, get the cmds from 'ls $CMD/usr/bin/*' and cd $HOME/.local/bin ; rm $cmds
 		fi
-	elif [ -z "$list" ]; then
+	elif [ -z "$quiet" ]; then
 		echo "$CMD is already installed"
 	fi
 }
@@ -117,8 +124,8 @@ install_gnome_extensions() {
 	fi
 }
 install_oh_my_zsh() {
-	install_command "zsh"
-	install_command "git"
+	install_command zsh
+	install_command git
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
@@ -252,6 +259,7 @@ exit_script() {
 }
 update_gum() {
 	[ ! -f $HOME/.local/bin/gum ] && { sudo apt install --only-upgrade gum; return; }
+	command -v jq &> /dev/null || install_command -q jq
 	repo=charmbracelet/gum
 	echo "Checking for the latest version of $repo..."
 	current_release=$(gum -v | cut -d ' ' -f 3)
