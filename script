@@ -84,7 +84,7 @@ install_command() {
 		if [ "$root" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
-			[ -z "$list" ] && { gum confirm "Are you sure you want to install a program without root?" && true || return; }
+			[ -z "$list" ] && { gum confirm "Are you sure you want to install a program without root?" || return 0; }
 			apt-get download $CMD
 			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
@@ -251,24 +251,21 @@ exit_script() {
 	exit
 }
 update_gum() {
+	[ ! -f $HOME/.local/bin/gum ] && { sudo apt install --only-upgrade gum; return; }
 	repo=charmbracelet/gum
 	echo "Checking for the latest version of $repo..."
 	current_release=$(gum -v | cut -d ' ' -f 3)
-	# For testing use curl -so ...
-	# curl -so latest.json https://api.github.com/repos/$repo/releases/latest
-	# curl -so releases.json https://api.github.com/repos/$repo/releases
-	# request=$(curl -s https://api.github.com/repos/$repo/releases/latest)
-	# jq -e 'has("message") and (.message | startswith("API rate limit exceeded"))'
-	# latest_release=$(echo -E "$request" | jq -r ".tag_name")
-	latest_release=$(curl -s https://api.github.com/repos/$repo/releases | grep -oP '"tag_name": "\K[^"]*' | head -n 1)
+	request=$(curl -s https://api.github.com/repos/$repo/releases/latest)
+	[ "$(echo -E "$request" | jq -er 'select(has("message")) | .message')" ] && return
+	latest_release=$(echo -E "$request" | jq -r ".tag_name")
 	if [ "$current_release" = "$latest_release" ]; then
 		gum style --bold --foreground $secondary --border-foreground $primary --border double --padding "0 1" --align center "$repo is already on the latest version"
 		return
 	fi
 	echo "Downloading $repo..."
-	# download_url=$(echo -E "$request" | jq -r '.assets[].browser_download_url | select(endswith("Linux_x86_64.tar.gz"))')
 	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
-	wget -q --show-progress https://github.com/$repo/releases/download/$latest_release/$gum_latest_release.tar.gz
+	download_url=$(echo -E "$request" | jq -r '.assets[].browser_download_url | select(endswith("Linux_x86_64.tar.gz"))')
+	wget -q --show-progress "$download_url"
 	tar -xzf $gum_latest_release.tar.gz
 	rm $HOME/.local/bin/gum
 	mv $gum_latest_release/gum $HOME/.local/bin
