@@ -80,11 +80,11 @@ install_command() {
 			echo "The package $CMD doesn't exist"
 			return
 		fi
-		[ -z "$list" ] && gum confirm "Do you have root privileges?" && root='y' || root='n'
+		[ -z "$list" ] && { gum confirm "Do you have root privileges?" && root='y' || root='n'; }
 		if [ "$root" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
-			[ -z "$list" ] && (gum confirm "Are you sure you want to install a program without root?" && true || return)
+			[ -z "$list" ] && { gum confirm "Are you sure you want to install a program without root?" && true || return; }
 			apt-get download $CMD
 			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
@@ -122,7 +122,7 @@ install_oh_my_zsh() {
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
-	command -v code &> /dev/null || (gum confirm "You have a code command, are you sure you want to continue?" && true || return)
+	command -v code &> /dev/null && { gum confirm "You have a code command, are you sure you want to continue?" && true || return; }
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
 	echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
 	sudo dpkg -i vscode.deb
@@ -144,7 +144,7 @@ install_vscode_rootless() {
 	fi
 }
 install_vscode_extensions() {
-	command -v code &> /dev/null || (echo no code command found ; return)
+	command -v code &> /dev/null || { echo no code command found ; return; }
 	code --install-extension ms-vscode.cpptools
 	code --install-extension github.copilot
 	code --install-extension ritwickdey.liveserver
