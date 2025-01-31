@@ -84,7 +84,7 @@ install_command() {
 		if [ "$root" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
-			[ -z "$list" ] && (gum confirm "Are you sure you want to install a program without root?" || return)
+			[ -z "$list" ] && (gum confirm "Are you sure you want to install a program without root?" && true || return)
 			apt-get download $CMD
 			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
