@@ -84,7 +84,7 @@ install_command() {
 		if [ "$root" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
-			[ -z "$list" ] && (gum confirm "Are you sure you want to install a program without root?" && true || return)
+			[ -z "$list" ] && (gum confirm "Are you sure you want to install a program without root?" || return)
 			apt-get download $CMD
 			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
@@ -100,7 +100,7 @@ install_command() {
 install_gnome_extensions() {
 	install_command chrome-gnome-shell
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
-		gum confirm "After clicking [Add]/[Allow], close firefox?" && true || return
+		gum confirm "After clicking [Add]/[Allow], close firefox?" || return
 		cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
 		wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
 		firefox gnome_shell_integration-12.xpi
@@ -108,11 +108,11 @@ install_gnome_extensions() {
 		cd - > /dev/null
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
-		gum confirm "After clicking [ON]/[Install], close firefox?" && true || return
+		gum confirm "After clicking [ON]/[Install], close firefox?" || return
 		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
 	fi
 	if ! gnome-extensions list --enabled | grep -q clipboard-indicator; then
-		gum confirm "After clicking [ON]/[Install], close firefox?" && true || return
+		gum confirm "After clicking [ON]/[Install], close firefox?" || return
 		firefox https://extensions.gnome.org/extension/779/clipboard-indicator/
 	fi
 }
@@ -122,7 +122,7 @@ install_oh_my_zsh() {
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
-	command -v code &> /dev/null || (gum confirm "You have a code command, are you sure you want to continue?" && true || return)
+	command -v code &> /dev/null || (gum confirm "You have a code command, are you sure you want to continue?" || return)
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
 	echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
 	sudo dpkg -i vscode.deb
@@ -130,10 +130,15 @@ install_vscode_root() {
 	rm vscode.deb
 }
 install_vscode_rootless() {
+	if [ -d "$VSCODE_PATH/vscode" ]; then
+		gum confirm "$VSCODE_PATH/vscode will be removed, do you want to continue?" || return
+		rm -rf $VSCODE_PATH/vscode
+	fi
 	wget -q --show-progress -O VSCode-linux-x64.tgz "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64"
 	tar -xzf VSCode-linux-x64.tgz
 	rm VSCode-linux-x64.tgz
 	mv VSCode-linux-x64 $VSCODE_PATH/vscode
+	[ -L "$HOME/.local/bin/code" ] && return
 	if command -v code; then
 		ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/vscode
 		echo \'code\' command exists, created symlink named vscode
@@ -169,7 +174,7 @@ EOF
 	fi
 }
 adding_alias() {
-	gum confirm "Do you want to add aliases to .zshrc?" && true || return
+	gum confirm "Do you want to add aliases to .zshrc?" || return
 	# verify is zsh is installed
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases on .zshrc already added
@@ -201,7 +206,7 @@ install_docker() {
 	docker run hello-world
 }
 setting_default_shell() {
-	gum confirm "Do you want to set zsh as default shell?" && true || return
+	gum confirm "Do you want to set zsh as default shell?" || return
 	gum confirm "Do you have root privileges?" && root='y' || root='n'
 	# verify is zsh is installed
 	if [ "$SHELL" != '/usr/bin/zsh' ]; then
@@ -277,7 +282,7 @@ mode() {
 	gum confirm "Do you have root privileges?" && root='y' || root='n'
 	check_installed_programs
 	echo mode root: $root
-	gum confirm "Do you want to continue?" && true || return
+	gum confirm "Do you want to continue?" || return
 	install_gnome_extensions
 	install_oh_my_zsh
 	[ "$root" = 'y' ] && install_vscode_root || install_vscode_rootless
