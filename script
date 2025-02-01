@@ -161,8 +161,11 @@ configure_zsh_and_alias() {
 	if ! command -v zsh &> /dev/null || [ ! -f "$HOME/.zshrc" ]; then
 		echo no zsh or .zshrc file ; return
 	fi
-	git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH_CUSTOM/plugins/zsh-autosuggestions
-	git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+	(
+		cd $HOME/.oh-my-zsh/custom/plugins
+		git clone https://github.com/zsh-users/zsh-autosuggestions.git zsh-autosuggestions
+		git clone https://github.com/zsh-users/zsh-syntax-highlighting.git zsh-syntax-highlighting
+	)
 	sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' $HOME/.zshrc
 	sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
 	sed -i "/^# zstyle ':omz:update' mode auto/s/^..//" $HOME/.zshrc
