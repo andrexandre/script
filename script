@@ -226,9 +226,6 @@ setup_tlp() {
 		sudo systemctl enable tlp
 	fi
 }
-about() {
-	open https://github.com/andrexandre/script > /dev/null
-}
 quit() {
 	cd - > /dev/null
 	rmdir $TEMP_DIR
@@ -311,6 +308,28 @@ full_mode() {
 	install_vscode_extensions
 	configure_vscode_settings
 	quit
+}
+about() {
+	while true; do
+		REPLY=$(gum choose --header="What do you want to know about?" repo docker gum test.sh back)
+		case $REPLY in
+			repo)
+				open https://github.com/andrexandre/script > /dev/null
+				;;
+			docker)
+				open https://docs.docker.com/engine/install/ubuntu > /dev/null
+				open https://docs.docker.com/engine/install/linux-postinstall > /dev/null
+				;;
+			gum)
+				open https://github.com/charmbracelet/gum?tab=readme-ov-file#gum > /dev/null
+				;;
+			test.sh)
+				open https://gist.github.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907 > /dev/null
+				;;
+		esac
+		[ "$REPLY" = "back" ] && break
+		sleep 1
+	done
 }
 view_code() {
 	curl -sO https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script
