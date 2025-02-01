@@ -52,7 +52,7 @@ parse_install_cmd() {
 	else
 		CMD=$1
 	fi
-	if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
+	if ! apt-cache policy $CMD | grep -q "Candidate:"; then
 		echo "The package $CMD doesn't exist"
 		return 1
 	fi
@@ -71,7 +71,6 @@ install_cmd_rootless() {
 		rm $CMD*.deb
 		cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
 		rm -rf $TEMP_DIR/$CMD
-		# to remove all, get the cmds from 'ls $CMD/usr/bin/*' and cd $HOME/.local/bin ; rm $cmds
 	fi
 }
 # Configurating extensions
@@ -244,6 +243,29 @@ update_gum() {
 show_script_code() {
 	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | gum pager
 }
+uninstall_cmd_rootless() {
+	if [ -z "$1" ]; then
+		CMD=$(gum input --placeholder "Enter the program to install:")
+		[ -z "$CMD" ] && return 1
+	else
+		CMD=$1
+	fi
+	if ! apt-cache policy $CMD | grep -q "Candidate:"; then
+		echo "The package $CMD doesn't exist"
+		return 1
+	fi
+	if ! command -v $CMD > /dev/null; then
+		echo "$CMD is not installed"
+		return 1
+	fi
+	apt-get download $CMD
+	dpkg -x $CMD*.deb $TEMP_DIR/$CMD
+	rm $CMD*.deb
+	cmds=$(ls $TEMP_DIR/$CMD/usr/bin/*)
+	echo $cmds
+	# cd $HOME/.local/bin ; rm $cmds
+	rm -rf $TEMP_DIR/$CMD
+}
 rootless_mode() {
 	gum confirm "Do you want to run rootless mode?" || return
 	install_gnome_extensions
@@ -301,7 +323,7 @@ main() {
 				;;
 			configure)
 				REPLY=$(gum choose --header="$user_prompt" configure_vscode_extensions configure_vscode_settings \
-					zsh_config_and_alias set_zsh_as_default_shell back)
+					zsh_config_and_alias set_zsh_as_default_shell uninstall_cmd_rootless back)
 				;;
 			system)
 				REPLY=$(gum choose --header="$user_prompt" system_update install_gnome_extensions install_extras \
@@ -311,7 +333,7 @@ main() {
 				REPLY=$(gum choose --header="$user_prompt" rootless_mode root_mode full_mode back)
 				;;
 			options)
-				REPLY=$(gum choose --header="$user_prompt" $start_view_code uninstall_mode_WIP show_script_code \
+				REPLY=$(gum choose --header="$user_prompt" $start_view_code show_script_code \
 					update_gum about back)
 				;;
 		esac
