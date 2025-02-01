@@ -48,7 +48,7 @@ fi
 parse_install_cmd() {
 	if [ -z "$1" ]; then
 		CMD=$(gum input --placeholder "Enter the program to install:")
-		[ -z "$CMD" ] && return 1
+		[ -z "$CMD" ] && return
 	else
 		CMD=$1
 	fi
@@ -56,20 +56,29 @@ parse_install_cmd() {
 		echo "The package $CMD doesn't exist"
 		return 1
 	fi
-	if command -v $CMD; then
-		echo "$CMD is already installed"
-		return 1
-	fi
 }
 install_cmd_root() {
-	parse_install_cmd "$@" && sudo apt-get install -y $CMD
+	if parse_install_cmd "$@"; then
+		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
+			echo "$CMD is already installed" ; return
+		else
+			sudo apt-get install -y $CMD > /dev/null
+			[ -z "$list" ] && echo "$CMD installed successfully"
+		fi
+	fi
 }
 install_cmd_rootless() {
 	if parse_install_cmd "$@"; then
-		apt-get download $CMD
+		apt-get download $CMD > /dev/null
 		dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 		rm $CMD*.deb
-		cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
+		# check if files in .local/bin correspond to the binaries to be installed
+		if ls "$TEMP_DIR/$CMD/usr/bin" | grep -Fxf <(ls "$HOME/.local/bin"); then
+			echo "$CMD is already installed"
+		else
+			cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
+			[ -z "$list" ] && echo "$CMD installed successfully"
+		fi
 		rm -rf $TEMP_DIR/$CMD
 	fi
 }
@@ -78,11 +87,12 @@ install_gnome_extensions() {
 	command -v chrome-gnome-shell &> /dev/null || install_cmd_root chrome-gnome-shell
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
 		gum confirm "After clicking [Add]/[Allow], close firefox?" || return
-		cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
-		wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
-		firefox gnome_shell_integration-12.xpi
-		rm gnome_shell_integration-12.xpi
-		cd - > /dev/null
+		(
+			cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
+			wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
+			firefox gnome_shell_integration-12.xpi
+			rm gnome_shell_integration-12.xpi
+		)
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
 		gum confirm "After clicking [ON]/[Install], close firefox?" || return
@@ -245,26 +255,22 @@ show_script_code() {
 }
 uninstall_cmd_rootless() {
 	if [ -z "$1" ]; then
-		CMD=$(gum input --placeholder "Enter the program to install:")
-		[ -z "$CMD" ] && return 1
+		CMD=$(gum input --placeholder "Enter the program to uninstall:")
+		[ -z "$CMD" ] && return
 	else
 		CMD=$1
 	fi
 	if ! apt-cache policy $CMD | grep -q "Candidate:"; then
 		echo "The package $CMD doesn't exist"
-		return 1
+		return
 	fi
-	if ! command -v $CMD > /dev/null; then
-		echo "$CMD is not installed"
-		return 1
-	fi
-	apt-get download $CMD
+	apt-get download $CMD > /dev/null
 	dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 	rm $CMD*.deb
-	cmds=$(ls $TEMP_DIR/$CMD/usr/bin/*)
-	echo $cmds
-	# cd $HOME/.local/bin ; rm $cmds
+	cmds=$(ls $TEMP_DIR/$CMD/usr/bin)
 	rm -rf $TEMP_DIR/$CMD
+	(cd $HOME/.local/bin ; rm -f $cmds)
+	[ -z "$list" ] && echo "$CMD removed successfully"
 }
 rootless_mode() {
 	gum confirm "Do you want to run rootless mode?" || return
@@ -339,7 +345,11 @@ main() {
 		esac
 		[ "$REPLY" = "toggle_view_code" ] && toggle_view_code && continue
 		[ "$REPLY" = "back" ] && continue
-		[ "$view_code_enabled" = "n" ] && $REPLY || view_code "$REPLY"
+		if [ "$view_code_enabled" = "n" ]; then
+			$REPLY
+		else
+			view_code "$REPLY"
+		fi
 	done
 }
 if ! command -v gum &> /dev/null; then
