@@ -282,10 +282,18 @@ view_code() {
 	awk "/^${name}\(\) {/,/}/" script | gum pager
 	rm script
 }
+toggle_view_code() {
+	[ "$view_code_enabled" = "n" ] && secondary=$green || secondary=$blue
+	[ "$view_code_enabled" = "n" ] && user_prompt='Choose a function to see the code:' || user_prompt='Choose a function to execute:'
+	update_styling_variables
+	[ "$view_code_enabled" = "n" ] && unset start_view_code && quit_view_code=toggle_view_code
+	[ "$view_code_enabled" = "y" ] && unset quit_view_code && start_view_code=toggle_view_code
+	[ "$view_code_enabled" = "n" ] && view_code_enabled=y || view_code_enabled=n
+}
 main() {
 	gum style --bold --border double --padding "0 1" --align center "Welcome to the Linux setup script!"
 	while true; do
-		REPLY=$(gum choose --header="$user_prompt" install configure system mode options quit)
+		REPLY=$(gum choose --header="$user_prompt" install configure system mode options $quit_view_code quit)
 		case $REPLY in
 			install)
 				REPLY=$(gum choose --header="$user_prompt" install_cmd_rootless install_cmd_root \
@@ -303,18 +311,11 @@ main() {
 				REPLY=$(gum choose --header="$user_prompt" rootless_mode root_mode full_mode back)
 				;;
 			options)
-				REPLY=$(gum choose --header="$user_prompt" $view_code_name uninstall_mode_WIP show_script_code \
+				REPLY=$(gum choose --header="$user_prompt" $start_view_code uninstall_mode_WIP show_script_code \
 					update_gum about back)
 				;;
-			$view_code_name)
-				[ "$view_code_enabled" = "n" ] && secondary=$green || secondary=$blue
-				[ "$view_code_enabled" = "n" ] && view_code_name=disable_view_code || view_code_name=enable_view_code
-				[ "$view_code_enabled" = "n" ] && user_prompt='Choose a function to see the code:' || user_prompt='Choose a function to execute:'
-				update_styling_variables
-				[ "$view_code_enabled" = "n" ] && view_code_enabled=y || view_code_enabled=n
-				continue
-				;;
 		esac
+		[ "$REPLY" = "toggle_view_code" ] && toggle_view_code && continue
 		[ "$REPLY" = "back" ] && continue
 		[ "$view_code_enabled" = "n" ] && $REPLY || view_code "$REPLY"
 	done
@@ -342,7 +343,7 @@ if [ "$DEBUG" ]; then
 	gum confirm "Continue?" || quit
 fi
 view_code_enabled=n
-view_code_name=enable_view_code
+start_view_code=toggle_view_code
 user_prompt='Choose a function to execute:'
 if [ -z "$list" ]; then
 	main
