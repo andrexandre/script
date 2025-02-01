@@ -158,15 +158,14 @@ EOF
 	fi
 }
 configure_zsh_and_alias() {
-	if ! command -v zsh &> /dev/null || [ -f "$HOME/.zshrc" ]; then
-		echo no zsh or .zshrc file
+	if ! command -v zsh &> /dev/null || [ ! -f "$HOME/.zshrc" ]; then
+		echo no zsh or .zshrc file ; return
 	fi
 	sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' $HOME/.zshrc
 	sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
 	sed -i "/^# zstyle ':omz:update' mode auto/s/^..//" $HOME/.zshrc
 	if grep -q "My custom aliases" $HOME/.zshrc; then
-		echo aliases on .zshrc already added
-		return
+		echo aliases on .zshrc already added ; return
 	fi
 	cat << 'EOF' >> $HOME/.zshrc
 #My custom aliases
