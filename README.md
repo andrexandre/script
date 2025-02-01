@@ -2,38 +2,33 @@
 
 This script automates the installation and setup of a bunch of programs in Linux
 
-- Installs VScode and changes settings
-- Installs Oh my zsh and customizes .zshrc
-- Adds shell alias and sets the default shell
-- Installs Gnome shell extensions like "dash to panel" and "clipboard indicator"
+- Install VScode, gnome extensions and normal commands without root
+- Install VScode, edge and docker with root and more...
+- Setup a bunch of other personal configurations
 
-<!-- Document modes -->
+It has 3 modes (rootless, root and full) that run a collection of commands
 
 ## Usage
 
 ```bash
 curl -sL andrexandre.github.io | sh
 ```
-> -s = silent, -L = automatically follow the redirect
+> -s = silent, -L = automatically follow redirects
 
-#### Its possible run automatically by exporting a list of commands:
+#### Run the script automatically by exporting a list of commands:
 ```bash
 export arg=n list="system_update install_docker" ; curl -sL andrexandre.github.io | sh
 ```
 > arg=n - will disable command arguments so you can stack multiple commands without newlines
 
-#### Its also possible to run commands with arguments:
+#### To run the commands with arguments:
 ```bash
-export root=y list='install_command git
-install_command zsh
+export list='install_cmd_root git
+install_cmd_root zsh
 install_oh_my_zsh' ; curl -sL andrexandre.github.io | sh
 ```
-> root=y - in this case will install the command with sudo, root=n - default
 
 <br>
 
 > [!IMPORTANT]
-> Certain features may not function properly a Debian-based distribution is used
-
-> [!NOTE]
-> To view or download the script, visit the [script](script) file on GitHub
+> Certain features may not function properly unless a Debian-based distribution is used

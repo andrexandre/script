@@ -45,56 +45,38 @@ if ! grep -qF '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.
 	echo '# include ~/.local/bin in PATH' >> $shellrc
 	echo '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' >> $shellrc
 fi
-
-if ! command -v gum &> /dev/null; then
-	repo=charmbracelet/gum
-	echo "Checking for the latest version of $repo..."
-	latest_release=$(curl -s https://api.github.com/repos/$repo/releases | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -n 1)
-	latest_release_name=gum_${latest_release#v}_Linux_x86_64
-	echo "Downloading $repo..."
-	wget -q --show-progress https://github.com/$repo/releases/download/$latest_release/$latest_release_name.tar.gz
-	tar -xzf $latest_release_name.tar.gz
-	mv $latest_release_name/gum $HOME/.local/bin
-	rm -rf $latest_release_name.tar.gz $latest_release_name
-fi
-
-install_command() {
+parse_install_cmd() {
 	if [ -z "$1" ]; then
 		CMD=$(gum input --placeholder "Enter the program to install:")
-		[ -z "$CMD" ] && return
+		[ -z "$CMD" ] && return 1
 	else
-		[ "$list" ] && local quiet=y
-		if [ "$1" = "-q" ]; then
-			[ -z "$2" ] && { echo argument required; return; }
-			local quiet=y
-			CMD=$2
-		else
-			CMD=$1
-		fi
+		CMD=$1
 	fi
-	if ! command -v $CMD &> /dev/null; then
-		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
-			echo "The package $CMD doesn't exist"
-			return
-		fi
-		[ -z "$quiet" ] && { gum confirm "Do you have root privileges?" && root='y' || root='n'; }
-		if [ "$root" = 'y' ]; then
-			sudo apt-get install -y $CMD
-		else
-			apt-get download $CMD
-			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
-			rm $CMD*.deb
-			cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
-			rm -rf $TEMP_DIR/$CMD
-			# to remove all, get the cmds from 'ls $CMD/usr/bin/*' and cd $HOME/.local/bin ; rm $cmds
-		fi
-	elif [ -z "$quiet" ]; then
+	if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
+		echo "The package $CMD doesn't exist"
+		return 1
+	fi
+	if command -v $CMD; then
 		echo "$CMD is already installed"
+		return 1
+	fi
+}
+install_cmd_root() {
+	parse_install_cmd "$@" && sudo apt-get install -y $CMD
+}
+install_cmd_rootless() {
+	if parse_install_cmd "$@"; then
+		apt-get download $CMD
+		dpkg -x $CMD*.deb $TEMP_DIR/$CMD
+		rm $CMD*.deb
+		cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
+		rm -rf $TEMP_DIR/$CMD
+		# to remove all, get the cmds from 'ls $CMD/usr/bin/*' and cd $HOME/.local/bin ; rm $cmds
 	fi
 }
 # Configurating extensions
 install_gnome_extensions() {
-	command -v chrome-gnome-shell &> /dev/null || root=y && install_command -q chrome-gnome-shell
+	command -v chrome-gnome-shell &> /dev/null || install_cmd_root chrome-gnome-shell
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
 		gum confirm "After clicking [Add]/[Allow], close firefox?" || return
 		cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
@@ -113,8 +95,8 @@ install_gnome_extensions() {
 	fi
 }
 install_oh_my_zsh() {
-	install_command -q zsh
-	install_command -q git
+	command -v zsh &> /dev/null || install_cmd_root -q zsh
+	command -v git &> /dev/null || install_cmd_root -q git
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
@@ -141,7 +123,7 @@ install_vscode_rootless() {
 		ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/code
 	fi
 }
-install_vscode_extensions() {
+configure_vscode_extensions() {
 	command -v code &> /dev/null || { echo no code command found ; return; }
 	code --install-extension ms-vscode.cpptools
 	code --install-extension github.copilot
@@ -166,7 +148,7 @@ EOF
 		echo settings.json already created
 	fi
 }
-add_alias_to_zshrc() {
+zsh_config_and_alias() {
 	# verify is zsh is installed
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases on .zshrc already added
@@ -205,7 +187,7 @@ set_zsh_as_default_shell() {
 	fi
 }
 install_edge() {
-	command -v microsoft-edge &> /dev/null && { echo "edge is already installed"; return; }
+	command -v microsoft-edge-stable &> /dev/null && { echo "edge is already installed"; return; }
 	latest_version=$(curl -s https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
 	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
 	sudo dpkg -i edge.deb
@@ -219,7 +201,7 @@ install_extras() {
 	# build-essential has: gcc, g++, make, etc... and ubuntu-extras has codecs
 	sudo apt-get install -y gnome-tweaks build-essential ubuntu-restricted-extras
 }
-remove_poweroff_countdown() {
+disable_logout_prompt() {
 	gsettings set org.gnome.SessionManager logout-prompt false
 }
 setup_tlp() {
@@ -231,14 +213,14 @@ setup_tlp() {
 about() {
 	open https://github.com/andrexandre/script > /dev/null
 }
-exit_script() {
+quit() {
 	cd - > /dev/null
 	rmdir $TEMP_DIR
 	exit
 }
 update_gum() {
 	[ ! -f $HOME/.local/bin/gum ] && { sudo apt install --only-upgrade gum; return; }
-	command -v jq &> /dev/null || install_command -q jq
+	command -v jq &> /dev/null || install_cmd_rootless jq
 	repo=charmbracelet/gum
 	echo "Checking for the latest version of $repo..."
 	current_release=$(gum -v | cut -d ' ' -f 3)
@@ -259,21 +241,40 @@ update_gum() {
 	rm -rf $gum_latest_release.tar.gz $gum_latest_release
 	echo "$repo successfully updated"
 }
-show_script() {
+show_script_code() {
 	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | gum pager
 }
-mode() {
-	gum confirm "Do you have root privileges?" && root='y' || root='n'
-	echo mode root: $root
-	gum confirm "Do you want to continue?" || return
+rootless_mode() {
+	gum confirm "Do you want to run rootless mode?" || return
 	install_gnome_extensions
 	install_oh_my_zsh
-	[ "$root" = 'y' ] && install_vscode_root || install_vscode_rootless
+	install_vscode_rootless
 	install_vscode_extensions
 	configure_vscode_settings
-	add_alias_to_zshrc
+	zsh_config_and_alias
+	quit
+}
+root_mode() {
+	gum confirm "Do you want to run root mode?" || return
+	install_gnome_extensions
+	install_oh_my_zsh
+	zsh_config_and_alias
 	set_zsh_as_default_shell
-	exit_script
+	install_vscode_root
+	install_vscode_extensions
+	configure_vscode_settings
+	quit
+}
+full_mode() {
+	gum confirm "Do you want to run full mode?" || return
+	install_gnome_extensions
+	install_oh_my_zsh
+	zsh_config_and_alias
+	set_zsh_as_default_shell
+	install_vscode_root
+	install_vscode_extensions
+	configure_vscode_settings
+	quit
 }
 view_code() {
 	curl -sO https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script
@@ -282,18 +283,28 @@ view_code() {
 	rm script
 }
 main() {
-	gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
-	while [ "$REPLY" != "exit" ]; do
-		REPLY=$(gum choose --header="$user_prompt" install_command vscode shell install_gnome_extensions install_docker others show_script $view_code_name exit)
+	gum style --bold --border double --padding "0 1" --align center "Welcome to the Linux setup script!"
+	while true; do
+		REPLY=$(gum choose --header="$user_prompt" install configure system mode options quit)
 		case $REPLY in
-			vscode)
-				REPLY=$(gum choose --header="$user_prompt" install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
+			install)
+				REPLY=$(gum choose --header="$user_prompt" install_cmd_rootless install_cmd_root \
+					install_vscode_rootless install_vscode_root install_oh_my_zsh install_edge install_docker back)
 				;;
-			shell)
-				REPLY=$(gum choose --header="$user_prompt" install_oh_my_zsh add_alias_to_zshrc set_zsh_as_default_shell back)
+			configure)
+				REPLY=$(gum choose --header="$user_prompt" configure_vscode_extensions configure_vscode_settings \
+					zsh_config_and_alias set_zsh_as_default_shell back)
 				;;
-			others)
-				REPLY=$(gum choose --header="$user_prompt" install_edge system_update install_extras remove_poweroff_countdown setup_tlp mode update_gum about back)
+			system)
+				REPLY=$(gum choose --header="$user_prompt" system_update install_gnome_extensions install_extras \
+					disable_logout_prompt setup_tlp back)
+				;;
+			mode)
+				REPLY=$(gum choose --header="$user_prompt" rootless_mode root_mode full_mode back)
+				;;
+			options)
+				REPLY=$(gum choose --header="$user_prompt" $view_code_name uninstall_mode_WIP show_script_code \
+					update_gum about back)
 				;;
 			$view_code_name)
 				[ "$view_code_enabled" = "n" ] && secondary=$green || secondary=$blue
@@ -308,15 +319,28 @@ main() {
 		[ "$view_code_enabled" = "n" ] && $REPLY || view_code "$REPLY"
 	done
 }
+if ! command -v gum &> /dev/null; then
+	repo=charmbracelet/gum
+	command -v jq &> /dev/null || install_cmd_rootless jq
+	echo "Checking for the latest version of $repo..."
+	request=$(curl -s https://api.github.com/repos/$repo/releases/latest)
+	[ "$(echo -E "$request" | jq -er 'select(has("message")) | .message')" ] && return
+	latest_release=$(echo -E "$request" | jq -r ".tag_name")
+	echo "Downloading $repo..."
+	gum_latest_release=gum_${latest_release#v}_Linux_x86_64
+	download_url=$(echo -E "$request" | jq -r '.assets[].browser_download_url | select(endswith("Linux_x86_64.tar.gz"))')
+	wget -q --show-progress "$download_url"
+	tar -xzf $gum_latest_release.tar.gz
+	mv $gum_latest_release/gum $HOME/.local/bin
+	rm -rf $gum_latest_release.tar.gz $gum_latest_release
+fi
 # toggle debug mode by doing: export DEBUG=y/unset DEBUG
 if [ "$DEBUG" ]; then
 	wget -q gist.github.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907/raw/test.sh
 	bash test.sh
 	rm test.sh
-	exit_script
+	gum confirm "Continue?" || quit
 fi
-# default root to n in scripts
-[ -z "$root" ] && [ -z "$list" ] && root=n
 view_code_enabled=n
 view_code_name=enable_view_code
 user_prompt='Choose a function to execute:'
@@ -327,5 +351,5 @@ else
 	echo "$list" | while read -r list_item; do
 		$list_item
 	done
+	quit
 fi
-exit_script
