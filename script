@@ -40,6 +40,12 @@ else
 	cd $TEMP_DIR
 fi
 
+shellrc=$HOME/."$(basename "$SHELL")"rc
+if ! grep -qF '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' $shellrc; then
+	echo '# include ~/.local/bin in PATH' >> $shellrc
+	echo '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' >> $shellrc
+fi
+
 if ! command -v gum &> /dev/null; then
 	repo=charmbracelet/gum
 	echo "Checking for the latest version of $repo..."
@@ -52,22 +58,6 @@ if ! command -v gum &> /dev/null; then
 	rm -rf $latest_release_name.tar.gz $latest_release_name
 fi
 
-check_installed_programs() {
-	cmds=("zsh" "git") # code
-	for cmd in "${cmds[@]}"; do
-		if command -v $cmd &> /dev/null; then
-			echo -e "✅ $cmd is installed"
-		else
-			echo -e "❌ $cmd isn't installed"
-		fi
-	done
-	if ([ "$root" = 'y' ] && command -v code &> /dev/null) ||
-		([ "$root" = 'n' ] && [ -d $VSCODE_PATH/vscode ]); then
-		echo -e "✅ code is installed"
-	else
-		echo -e "❌ code isn't installed"
-	fi
-}
 install_command() {
 	if [ -z "$1" ]; then
 		CMD=$(gum input --placeholder "Enter the program to install:")
@@ -91,7 +81,6 @@ install_command() {
 		if [ "$root" = 'y' ]; then
 			sudo apt-get install -y $CMD
 		else
-			[ -z "$quiet" ] && { gum confirm "Are you sure you want to install a program without root?" || return 0; }
 			apt-get download $CMD
 			dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 			rm $CMD*.deb
@@ -105,7 +94,7 @@ install_command() {
 }
 # Configurating extensions
 install_gnome_extensions() {
-	install_command chrome-gnome-shell
+	command -v chrome-gnome-shell &> /dev/null || root=y && install_command -q chrome-gnome-shell
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
 		gum confirm "After clicking [Add]/[Allow], close firefox?" || return
 		cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
@@ -124,12 +113,12 @@ install_gnome_extensions() {
 	fi
 }
 install_oh_my_zsh() {
-	install_command zsh
-	install_command git
+	install_command -q zsh
+	install_command -q git
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
-	command -v code &> /dev/null && { gum confirm "You have a code command, are you sure you want to continue?" || return; }
+	command -v code && echo remove previous code command to install vscode && return
 	wget -q --show-progress -O vscode.deb "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
 	echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
 	sudo dpkg -i vscode.deb
@@ -137,10 +126,7 @@ install_vscode_root() {
 	rm vscode.deb
 }
 install_vscode_rootless() {
-	if [ -d "$VSCODE_PATH/vscode" ]; then
-		gum confirm "$VSCODE_PATH/vscode will be removed, do you want to continue?" || return
-		rm -rf $VSCODE_PATH/vscode
-	fi
+	[ -d "$VSCODE_PATH/vscode" ] && echo "rm -rf $VSCODE_PATH/vscode to install vscode" && return
 	wget -q --show-progress -O VSCode-linux-x64.tgz "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64"
 	tar -xzf VSCode-linux-x64.tgz
 	rm VSCode-linux-x64.tgz
@@ -180,15 +166,13 @@ EOF
 		echo settings.json already created
 	fi
 }
-adding_alias() {
-	gum confirm "Do you want to add aliases to .zshrc?" || return
+add_alias_to_zshrc() {
 	# verify is zsh is installed
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases on .zshrc already added
 		return
 	fi
 	cat << 'EOF' >> $HOME/.zshrc
-[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 #My custom aliases
 alias fgit='find . -type d -name ".git"'
 alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
@@ -212,23 +196,16 @@ install_docker() {
 	newgrp docker
 	docker run hello-world
 }
-setting_default_shell() {
-	gum confirm "Do you want to set zsh as default shell?" || return
-	gum confirm "Do you have root privileges?" && root='y' || root='n'
-	# verify is zsh is installed
-	if [ "$SHELL" != '/usr/bin/zsh' ]; then
-		if [ "$root" = 'y' ]; then
-			chsh -s $(which zsh)
-		else
-			echo 'export SHELL=`which zsh`' >> $HOME/.bashrc
-			echo '[ -z "$ZSH_VERSION" ] && exec "$SHELL" -l' >> $HOME/.bashrc
-		fi
-	else
+set_zsh_as_default_shell() {
+	command -v zsh &> /dev/null || { echo "zsh is not installed"; return; }
+	if [ "$SHELL" != "$(which zsh)" ]; then
+		chsh -s "$(which zsh)"
+	elif [ -z "$list" ]; then
 		echo default shell is already $SHELL
 	fi
 }
 install_edge() {
-	# if no: microsoft-edge
+	command -v microsoft-edge &> /dev/null && { echo "edge is already installed"; return; }
 	latest_version=$(curl -s https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
 	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
 	sudo dpkg -i edge.deb
@@ -247,7 +224,9 @@ remove_poweroff_countdown() {
 }
 setup_tlp() {
 	sudo apt-get install -y tlp tlp-rdw
-	sudo systemctl enable tlp
+	if ! systemctl is-enabled tlp &> /dev/null; then
+		sudo systemctl enable tlp
+	fi
 }
 about() {
 	open https://github.com/andrexandre/script > /dev/null
@@ -285,7 +264,6 @@ show_script() {
 }
 mode() {
 	gum confirm "Do you have root privileges?" && root='y' || root='n'
-	check_installed_programs
 	echo mode root: $root
 	gum confirm "Do you want to continue?" || return
 	install_gnome_extensions
@@ -293,8 +271,8 @@ mode() {
 	[ "$root" = 'y' ] && install_vscode_root || install_vscode_rootless
 	install_vscode_extensions
 	configure_vscode_settings
-	adding_alias
-	setting_default_shell
+	add_alias_to_zshrc
+	set_zsh_as_default_shell
 	exit_script
 }
 view_code() {
@@ -305,14 +283,14 @@ view_code() {
 }
 main() {
 	gum style --bold --width 40 --border double --padding "1 2" --align center "Welcome to the Linux setup script! by andrexandre"
-	while true; do
-		REPLY=$(gum choose --header="$user_prompt" install_command vscode shell install_gnome_extensions install_docker others show_script $view_code_name exit_script)
+	while [ "$REPLY" != "exit" ]; do
+		REPLY=$(gum choose --header="$user_prompt" install_command vscode shell install_gnome_extensions install_docker others show_script $view_code_name exit)
 		case $REPLY in
 			vscode)
 				REPLY=$(gum choose --header="$user_prompt" install_vscode_root install_vscode_rootless install_vscode_extensions configure_vscode_settings back)
 				;;
 			shell)
-				REPLY=$(gum choose --header="$user_prompt" install_oh_my_zsh adding_alias setting_default_shell back)
+				REPLY=$(gum choose --header="$user_prompt" install_oh_my_zsh add_alias_to_zshrc set_zsh_as_default_shell back)
 				;;
 			others)
 				REPLY=$(gum choose --header="$user_prompt" install_edge system_update install_extras remove_poweroff_countdown setup_tlp mode update_gum about back)
@@ -327,7 +305,6 @@ main() {
 				;;
 		esac
 		[ "$REPLY" = "back" ] && continue
-		[ "$REPLY" = "exit_script" ] && exit_script
 		[ "$view_code_enabled" = "n" ] && $REPLY || view_code "$REPLY"
 	done
 }
@@ -338,7 +315,8 @@ if [ "$DEBUG" ]; then
 	rm test.sh
 	exit_script
 fi
-[ -z "$root" ] && root=n
+# default root to n in scripts
+[ -z "$root" ] && [ -z "$list" ] && root=n
 view_code_enabled=n
 view_code_name=enable_view_code
 user_prompt='Choose a function to execute:'
@@ -349,5 +327,5 @@ else
 	echo "$list" | while read -r list_item; do
 		$list_item
 	done
-	exit_script
 fi
+exit_script

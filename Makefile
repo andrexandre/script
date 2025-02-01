@@ -15,7 +15,7 @@ all:
 	clear ; ./$(NAME)
 
 run:
-	curl -sL $(LINK) | bash
+	@curl -sSL $(LINK) | bash
 
 test:
 	curl -sL andrexandre.github.io | sh
