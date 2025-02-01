@@ -157,8 +157,13 @@ EOF
 		echo settings.json already created
 	fi
 }
-zsh_config_and_alias() {
-	# verify is zsh is installed
+configure_zsh_and_alias() {
+	if ! command -v zsh &> /dev/null || [ -f "$HOME/.zshrc" ]; then
+		echo no zsh or .zshrc file
+	fi
+	sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' $HOME/.zshrc
+	sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
+	sed -i "/^# zstyle ':omz:update' mode auto/s/^..//" $HOME/.zshrc
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases on .zshrc already added
 		return
@@ -175,9 +180,7 @@ gacp() {
 		git add . && git commit -m "$1" && git push
 	fi
 }
-export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
 EOF
-	sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
 }
 install_docker() {
 	curl -fsSL https://get.docker.com | sudo sh
@@ -279,14 +282,15 @@ rootless_mode() {
 	install_vscode_rootless
 	install_vscode_extensions
 	configure_vscode_settings
-	zsh_config_and_alias
+	configure_zsh_and_alias
+	echo 'export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST' >> $HOME/.zshrc
 	quit
 }
 root_mode() {
 	gum confirm "Do you want to run root mode?" || return
 	install_gnome_extensions
 	install_oh_my_zsh
-	zsh_config_and_alias
+	configure_zsh_and_alias
 	set_zsh_as_default_shell
 	install_vscode_root
 	install_vscode_extensions
@@ -297,7 +301,7 @@ full_mode() {
 	gum confirm "Do you want to run full mode?" || return
 	install_gnome_extensions
 	install_oh_my_zsh
-	zsh_config_and_alias
+	configure_zsh_and_alias
 	set_zsh_as_default_shell
 	install_vscode_root
 	install_vscode_extensions
@@ -329,7 +333,7 @@ main() {
 				;;
 			configure)
 				REPLY=$(gum choose --header="$user_prompt" configure_vscode_extensions configure_vscode_settings \
-					zsh_config_and_alias set_zsh_as_default_shell uninstall_cmd_rootless back)
+					configure_zsh_and_alias set_zsh_as_default_shell uninstall_cmd_rootless back)
 				;;
 			system)
 				REPLY=$(gum choose --header="$user_prompt" system_update install_gnome_extensions install_extras \
