@@ -96,7 +96,7 @@ install_gnome_extensions() {
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
 		echo "After clicking [ON]/[Install], click the button: settings -> about -> import from file and select the dash-to-panel.bak"
-		wget -Oq $HOME/Desktop gist.github.com/andrexandre/08622ff1367bf6af7b6ea084fea779be/raw/dash-to-panel.bak
+		wget -qO $HOME/Desktop/dash-to-panel.bak gist.github.com/andrexandre/08622ff1367bf6af7b6ea084fea779be/raw/dash-to-panel.bak
 		gum confirm "To continue, close firefox?" || return
 		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
 		rm $HOME/Desktop/dash-to-panel.bak
