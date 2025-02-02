@@ -95,8 +95,11 @@ install_gnome_extensions() {
 		)
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
-		gum confirm "After clicking [ON]/[Install], close firefox?" || return
+		echo "After clicking [ON]/[Install], click the button: settings -> about -> import from file and select the dash-to-panel.bak"
+		wget -Oq $HOME/Desktop gist.github.com/andrexandre/08622ff1367bf6af7b6ea084fea779be/raw/dash-to-panel.bak
+		gum confirm "To continue, close firefox?" || return
 		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
+		rm $HOME/Desktop/dash-to-panel.bak
 	fi
 	if ! gnome-extensions list --enabled | grep -q clipboard-indicator; then
 		gum confirm "After clicking [ON]/[Install], close firefox?" || return
@@ -217,8 +220,10 @@ install_extras() {
 	# build-essential has: gcc, g++, make, etc... and ubuntu-extras has codecs
 	sudo apt-get install -y gnome-tweaks build-essential ubuntu-restricted-extras
 }
-disable_logout_prompt() {
+define_settings() {
+	gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
 	gsettings set org.gnome.SessionManager logout-prompt false
+	gsettings set org.gnome.desktop.privacy old-files-age 30
 }
 setup_tlp() {
 	sudo apt-get install -y tlp tlp-rdw
@@ -278,6 +283,7 @@ uninstall_cmd_rootless() {
 }
 rootless_mode() {
 	gum confirm "Do you want to run rootless mode?" || return
+	define_settings
 	install_gnome_extensions
 	install_oh_my_zsh
 	install_vscode_rootless
@@ -289,6 +295,8 @@ rootless_mode() {
 }
 root_mode() {
 	gum confirm "Do you want to run root mode?" || return
+	define_settings
+	system_update
 	install_gnome_extensions
 	install_oh_my_zsh
 	configure_zsh_and_alias
@@ -296,10 +304,13 @@ root_mode() {
 	install_vscode_root
 	install_vscode_extensions
 	configure_vscode_settings
+	gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop', 'code.desktop']"
 	quit
 }
 full_mode() {
 	gum confirm "Do you want to run full mode?" || return
+	define_settings
+	system_update
 	install_gnome_extensions
 	install_oh_my_zsh
 	configure_zsh_and_alias
@@ -307,6 +318,15 @@ full_mode() {
 	install_vscode_root
 	install_vscode_extensions
 	configure_vscode_settings
+	setup_tlp
+	install_extras
+	install_edge
+	gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'microsoft-edge.desktop', 'org.gnome.Terminal.desktop', 'code.desktop']"
+	gcl https://github.com/ChrisTitusTech/Top-5-Bootloader-Themes ; echo Theme: vimix ; sudo ./Top-5-Bootloader-Themes/install.sh
+	sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet"/' /etc/default/grub
+	sudo sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT="2"/' /etc/default/grub
+	sudo update-grub
+	echo 'sudo reboot to finish the setup'
 	quit
 }
 about() {
@@ -360,7 +380,7 @@ main() {
 				;;
 			system)
 				REPLY=$(gum choose --header="$user_prompt" system_update install_gnome_extensions install_extras \
-					disable_logout_prompt setup_tlp back)
+					define_settings setup_tlp back)
 				;;
 			mode)
 				REPLY=$(gum choose --header="$user_prompt" rootless_mode root_mode full_mode back)
