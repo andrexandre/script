@@ -53,8 +53,7 @@ parse_install_cmd() {
 		CMD=$1
 	fi
 	if ! apt-cache policy $CMD | grep -q "Candidate:"; then
-		echo "The package $CMD doesn't exist"
-		return 1
+		echo "The package $CMD doesn't exist" ; return 1
 	fi
 }
 install_cmd_root() {
@@ -62,7 +61,7 @@ install_cmd_root() {
 		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
 			echo "$CMD is already installed" ; return
 		else
-			sudo apt-get install -y $CMD > /dev/null
+			sudo apt-get install -y $CMD > /dev/null &&
 			[ -z "$list" ] && echo "$CMD installed successfully"
 		fi
 	fi
@@ -365,6 +364,10 @@ toggle_view_code() {
 	[ "$view_code_enabled" = "y" ] && unset quit_view_code && start_view_code=toggle_view_code
 	[ "$view_code_enabled" = "n" ] && view_code_enabled=y || view_code_enabled=n
 }
+download_am() {
+	[ -f "am" ] && echo there is already an am in here
+	wget -q gist.github.com/andrexandre/8b944f651e292bcc0b2d21d17c35fe97/raw/am
+}
 main() {
 	gum style --bold --border double --padding "0 1" --align center "Welcome to the Linux setup script!"
 	while true; do
@@ -387,7 +390,7 @@ main() {
 				;;
 			options)
 				REPLY=$(gum choose --header="$user_prompt" $start_view_code show_script_code \
-					update_gum about back)
+					update_gum about download_am back)
 				;;
 		esac
 		[ "$REPLY" = "toggle_view_code" ] && toggle_view_code && continue
