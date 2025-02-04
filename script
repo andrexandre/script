@@ -366,7 +366,7 @@ toggle_view_code() {
 }
 download_am() {
 	[ -f "am" ] && echo there is already an am in here
-	wget -q gist.github.com/andrexandre/8b944f651e292bcc0b2d21d17c35fe97/raw/am
+	curl -so $OLDPWD/am https://raw.githubusercontent.com/andrexandre/alias-manager/refs/heads/main/am
 }
 main() {
 	gum style --bold --border double --padding "0 1" --align center "Welcome to the Linux setup script!"
