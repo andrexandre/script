@@ -46,8 +46,8 @@ fi
 [[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 parse_install_cmd() {
 	if [ -z "$1" ]; then
-		CMD=$(gum input --placeholder "Enter the program to install:")
-		[ -z "$CMD" ] && return
+		CMD=$(gum input --placeholder "Program to install")
+		[ -z "$CMD" ] && return 1
 	else
 		CMD=$1
 	fi
@@ -262,7 +262,7 @@ show_script_code() {
 }
 uninstall_cmd_rootless() {
 	if [ -z "$1" ]; then
-		CMD=$(gum input --placeholder "Enter the program to uninstall:")
+		CMD=$(gum input --placeholder "Program to uninstall")
 		[ -z "$CMD" ] && return
 	else
 		CMD=$1
