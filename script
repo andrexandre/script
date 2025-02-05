@@ -23,11 +23,7 @@ update_styling_variables() {
 update_styling_variables
 VSCODE_PATH=$HOME/Documents
 
-# checking if the user is root and $HOME/.local/bin is in PATH
 [ "$EUID" -eq 0 ] && (echo "Please do not run as root" ; exit 1)
-[ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
-[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
-
 if [ "$DEBUG" ]; then
 	TEMP_DIR=$(echo debugging) ; mkdir $TEMP_DIR
 else
@@ -40,11 +36,14 @@ else
 	cd $TEMP_DIR
 fi
 
+[ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
 shellrc=$HOME/."$(basename "$SHELL")"rc
-if ! grep -qF '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' $shellrc; then
+if ! echo "$PATH" | grep -q "$HOME/.local/bin" && \
+	! grep -qF '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' $shellrc; then
 	echo '# include ~/.local/bin in PATH' >> $shellrc
 	echo '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' >> $shellrc
 fi
+[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 parse_install_cmd() {
 	if [ -z "$1" ]; then
 		CMD=$(gum input --placeholder "Enter the program to install:")
