@@ -141,7 +141,7 @@ install_vscode_rootless() {
 	fi
 }
 configure_vscode_extensions() {
-	command -v code &> /dev/null || { echo no code command found ; return; }
+	! which code &> /dev/null && echo no code command found && return
 	code --install-extension ms-vscode.cpptools
 	code --install-extension github.copilot
 	code --install-extension ritwickdey.liveserver
@@ -203,7 +203,7 @@ install_docker() {
 	docker run hello-world
 }
 set_zsh_as_default_shell() {
-	command -v zsh &> /dev/null || { echo "zsh is not installed"; return; }
+	! command -v zsh &> /dev/null && echo zsh not installed && return
 	if [ "$SHELL" != "$(which zsh)" ]; then
 		chsh -s "$(which zsh)"
 	elif [ -z "$list" ]; then
@@ -211,7 +211,7 @@ set_zsh_as_default_shell() {
 	fi
 }
 install_edge() {
-	command -v microsoft-edge-stable &> /dev/null && { echo "edge is already installed"; return; }
+	command -v microsoft-edge-stable &> /dev/null && echo edge is already installed && return
 	latest_version=$(curl -s https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
 	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
 	sudo dpkg -i edge.deb
