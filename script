@@ -78,6 +78,13 @@ install_cmd_rootless() {
 			[ -z "$list" ] && echo "$CMD installed successfully"
 		fi
 		rm -rf $TEMP_DIR/$CMD
+		$CMD > /dev/null 2>&1
+		if [ "$?" = "127" ]; then
+			echo "The '$CMD' command, isnt correctly installed"
+			echo "Installing with sudo..."
+			sudo apt-get install -y $CMD > /dev/null &&
+			[ -z "$list" ] && echo "$CMD installed successfully"
+		fi
 	fi
 }
 # Configurating extensions
