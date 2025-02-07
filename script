@@ -389,9 +389,8 @@ main() {
 	done
 }
 if ! command -v gum &> /dev/null; then
-	local repo=charmbracelet/gum
-	echo "Downloading the latest version of $repo..."
-	download_url=$(curl -fsSL https://api.github.com/repos/$repo/releases/latest | grep -Eo '"https://github.com/charmbracelet/gum/releases/download/[^"]*_Linux_x86_64\.tar\.gz"')
+	echo "Downloading the latest version of gum..."
+	download_url=$(curl -fsSL https://api.github.com/repos/charmbracelet/gum/releases/latest | grep -Eo '"https://github.com/charmbracelet/gum/releases/download/[^"]*_Linux_x86_64\.tar\.gz"')
 	[ -z "$download_url" ] && echo "Failed to download gum" && quit 1
 	url=$(echo "$download_url" | sed 's/^"//;s/"$//')
 	wget -q --show-progress "$url"
