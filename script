@@ -82,8 +82,11 @@ install_cmd_rootless() {
 		if [ "$?" = "127" ]; then
 			echo "The '$CMD' command needs libraries"
 			echo "Installing with sudo..."
-			sudo apt-get install -y $CMD > /dev/null &&
-			[ -z "$list" ] && echo "$CMD installed successfully"
+			if sudo apt-get install -y $CMD > /dev/null; then
+				[ -z "$list" ] && echo "$CMD installed successfully"
+			else
+				rm $HOME/.local/bin/$CMD
+			fi
 		fi
 	fi
 }
@@ -239,7 +242,7 @@ setup_tlp() {
 quit() {
 	cd - > /dev/null
 	rmdir $TEMP_DIR
-	exit
+	exit $1
 }
 show_script_code() {
 	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | gum pager
@@ -347,9 +350,21 @@ toggle_view_code() {
 	[ "$view_code_enabled" = "y" ] && unset quit_view_code && start_view_code=toggle_view_code
 	[ "$view_code_enabled" = "n" ] && view_code_enabled=y || view_code_enabled=n
 }
-download_am() {
-	[ -f "am" ] && echo there is already an am in here
-	curl -so $OLDPWD/am https://raw.githubusercontent.com/andrexandre/alias-manager/refs/heads/main/am
+clone_repo() {
+	if ! command -v jq &> /dev/null; then
+		echo "jq is not installed. Please install jq to continue."
+		return 1
+	fi
+	! command -v fzf &> /dev/null && install_cmd_rootless fzf
+	if [ -z "$1" ]; then
+		local username=$(gum input --placeholder "Name of the github user")
+		[ -z "$username" ] && return
+	fi
+	if [ -z "$2" ]; then
+		local repo=$(curl -s https://api.github.com/users/$username/repos | jq -r '.[].name' | fzf)
+		[ -z "$repo" ] && return
+		git clone --recursive "git@github.com:$username/$repo.git" "$OLDPWD/$repo"
+	fi
 }
 main() {
 	! command -v gum &> /dev/null && echo gum not installed && return
@@ -374,7 +389,7 @@ main() {
 				;;
 			options)
 				REPLY=$(gum choose --header="$user_prompt" $start_view_code show_script_code \
-					about download_am back)
+					about clone_repo back)
 				;;
 		esac
 		[ "$REPLY" = "toggle_view_code" ] && toggle_view_code && continue
@@ -388,10 +403,10 @@ main() {
 	done
 }
 if ! command -v gum &> /dev/null; then
-	repo=charmbracelet/gum
+	local repo=charmbracelet/gum
 	echo "Downloading the latest version of $repo..."
 	download_url=$(curl -s https://api.github.com/repos/$repo/releases/latest | grep -Eo '"https://github.com/charmbracelet/gum/releases/download/[^"]*_Linux_x86_64\.tar\.gz"')
-	[ -z "$download_url" ] && { echo "Failed to download gum"; exit 1; }
+	[ -z "$download_url" ] && echo "Failed to download gum" && quit 1
 	url=$(echo "$download_url" | sed 's/^"//;s/"$//')
 	wget -q --show-progress "$url"
 	gum_latest_release=$(basename "$url" .tar.gz)
@@ -412,6 +427,7 @@ user_prompt='Choose a function to execute:'
 if [ -z "$list" ]; then
 	main
 else
+	echo list: $list
 	[ "$arg" ] && list=$(echo "$list" | tr ' ' '\n')
 	echo "$list" | while read -r list_item; do
 		$list_item
