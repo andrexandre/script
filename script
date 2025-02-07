@@ -359,6 +359,7 @@ clone_repo() {
 	if [ -z "$1" ]; then
 		local username=$(gum input --placeholder "Name of the github user")
 		[ -z "$username" ] && return
+		[ $username = "a" ] && username=andrexandre
 	fi
 	if [ -z "$2" ]; then
 		local repo=$(curl -s https://api.github.com/users/$username/repos | jq -r '.[].name' | fzf)
