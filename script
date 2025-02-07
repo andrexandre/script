@@ -183,19 +183,7 @@ configure_zsh_and_alias() {
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases on .zshrc already added ; return
 	fi
-	cat << 'EOF' >> $HOME/.zshrc
-#My custom aliases
-alias fgit='find . -type d -name ".git"'
-alias ccc='cc -Wall -Wextra -Werror *.c -lbsd -lreadline && ./a.out'
-alias subm_to_main="git submodule foreach 'git checkout main -q 2>/dev/null || git checkout master -q 2>/dev/null'"
-gacp() {
-	if [ -z "$1" ]; then
-		git add . && git commit -m "Update" && git push
-	else
-		git add . && git commit -m "$1" && git push
-	fi
-}
-EOF
+	curl -fsSL gist.github.com/andrexandre/eee55b8b0c321c23ea62fec037ca430b/raw/.zshrc >> $HOME/.zshrc
 }
 install_docker() {
 	curl -fsSL https://get.docker.com | sudo sh
@@ -215,7 +203,7 @@ set_zsh_as_default_shell() {
 }
 install_edge() {
 	command -v microsoft-edge-stable &> /dev/null && echo edge is already installed && return
-	latest_version=$(curl -s https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
+	latest_version=$(curl -fsSL https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
 	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
 	sudo dpkg -i edge.deb
 	sudo apt-get install -f
@@ -245,7 +233,7 @@ quit() {
 	exit $1
 }
 show_script_code() {
-	curl -s https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | gum pager
+	curl -fsSL https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | gum pager
 }
 uninstall_cmd_rootless() {
 	if [ -z "$1" ]; then
@@ -337,10 +325,7 @@ about() {
 	done
 }
 view_code() {
-	curl -sO https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script
-	name="$1"
-	awk "/^${name}\(\) {/,/}/" script | gum pager
-	rm script
+	curl -fsSL https://raw.githubusercontent.com/andrexandre/script/refs/heads/main/script | awk "/^${1}\(\) {/,/}/" | gum pager
 }
 toggle_view_code() {
 	[ "$view_code_enabled" = "n" ] && secondary=$green || secondary=$blue
@@ -362,7 +347,7 @@ clone_repo() {
 		[ $username = "a" ] && username=andrexandre
 	fi
 	if [ -z "$2" ]; then
-		local repo=$(curl -s https://api.github.com/users/$username/repos | jq -r '.[].name' | fzf)
+		local repo=$(curl -fsSL https://api.github.com/users/$username/repos | jq -r '.[].name' | fzf)
 		[ -z "$repo" ] && return
 		git clone --recursive "git@github.com:$username/$repo.git" "$OLDPWD/$repo"
 	fi
@@ -406,7 +391,7 @@ main() {
 if ! command -v gum &> /dev/null; then
 	local repo=charmbracelet/gum
 	echo "Downloading the latest version of $repo..."
-	download_url=$(curl -s https://api.github.com/repos/$repo/releases/latest | grep -Eo '"https://github.com/charmbracelet/gum/releases/download/[^"]*_Linux_x86_64\.tar\.gz"')
+	download_url=$(curl -fsSL https://api.github.com/repos/$repo/releases/latest | grep -Eo '"https://github.com/charmbracelet/gum/releases/download/[^"]*_Linux_x86_64\.tar\.gz"')
 	[ -z "$download_url" ] && echo "Failed to download gum" && quit 1
 	url=$(echo "$download_url" | sed 's/^"//;s/"$//')
 	wget -q --show-progress "$url"
