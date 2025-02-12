@@ -13,22 +13,25 @@ It has 3 modes (rootless, root and full) that run a collection of commands
 ```bash
 curl -sL andrexandre.github.io | sh
 ```
-> -s = silent, -L = automatically follow redirects
+> `-s` silent mode, `-L` automatically follow redirects
 
-#### Run the script automatically by exporting a list of commands:
+#### Run the script automatically by exporting a list of commands
 ```bash
 export arg=n list="system_update install_docker" ; curl -sL andrexandre.github.io | sh
 ```
-> arg=n - will disable command arguments so you can stack multiple commands without newlines
+> `arg=n` will disable command arguments so you can stack multiple commands without newlines
 
-#### To run the commands with arguments:
+#### To run the commands with arguments
 ```bash
 export list='install_cmd_root git
 install_cmd_root zsh
 install_oh_my_zsh' ; curl -sL andrexandre.github.io | sh
 ```
 
-<br>
+#### You can run a version of the script some commits back
+```bash
+curl -sL andrexandre.github.io/old | sh
+```
 
 > [!IMPORTANT]
 > Certain features may not function properly unless a Debian-based distribution is used
