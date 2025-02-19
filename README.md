@@ -35,3 +35,9 @@ curl -sL andrexandre.github.io/old | sh
 
 > [!IMPORTANT]
 > Certain features may not function properly unless a Debian-based distribution is used
+
+> [!NOTE]
+> If you want a shorter version you can use this also
+> ```bash
+> curl -L abre.ai/42- | sh
+> ```
