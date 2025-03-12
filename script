@@ -220,6 +220,8 @@ define_settings() {
 	gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
 	gsettings set org.gnome.SessionManager logout-prompt false
 	gsettings set org.gnome.desktop.privacy old-files-age 30
+	gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-left "['<Super>Page_Up', '<Super><Alt>Left']"
+	gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-right "['<Super>Page_Down', '<Super><Alt>Right']"
 }
 setup_tlp() {
 	sudo apt-get install -y tlp tlp-rdw
