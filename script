@@ -78,7 +78,7 @@ install_cmd_rootless() {
 			[ -z "$list" ] && echo "$CMD installed successfully"
 		fi
 		rm -rf $TEMP_DIR/$CMD
-		$CMD > /dev/null 2>&1
+		timeout 2s $CMD > /dev/null 2>&1
 		if [ "$?" = "127" ]; then
 			echo "The '$CMD' command needs libraries"
 			echo "Installing with sudo..."
