@@ -22,6 +22,7 @@ update_styling_variables() {
 }
 update_styling_variables
 VSCODE_PATH=$HOME/Documents
+log() { echo "$@"; }
 
 [ "$EUID" -eq 0 ] && (echo "Please do not run as root" ; exit 1)
 if [ "$DEBUG" ]; then
@@ -61,7 +62,7 @@ install_cmd_root() {
 			echo "$CMD is already installed" ; return
 		else
 			sudo apt-get install -y $CMD > /dev/null &&
-			[ -z "$list" ] && echo "$CMD installed successfully"
+			log "$CMD installed successfully"
 		fi
 	fi
 }
@@ -71,23 +72,28 @@ install_cmd_rootless() {
 		dpkg -x $CMD*.deb $TEMP_DIR/$CMD
 		rm $CMD*.deb
 		# check if files in .local/bin correspond to the binaries to be installed
-		if ls "$TEMP_DIR/$CMD/usr/bin" | grep -Fxf <(ls "$HOME/.local/bin"); then
-			echo "$CMD is already installed"
+		cmds=$(ls $TEMP_DIR/$CMD/usr/bin)
+		if echo $cmds | grep -Fxf <(ls "$HOME/.local/bin") > /dev/null; then
+			log "$CMD is already installed"
+			rm -rf $TEMP_DIR/$CMD
+			return
 		else
 			cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
-			[ -z "$list" ] && echo "$CMD installed successfully"
 		fi
 		rm -rf $TEMP_DIR/$CMD
-		[ -z "$list" ] && echo Testing the need of libraries...
+		log Testing the need of libraries...
 		timeout -s KILL 2s $CMD > /dev/null 2>&1
 		if [ "$?" = "127" ]; then
-			echo "The '$CMD' command needs libraries"
-			echo "Installing with sudo..."
+			log "$CMD needs libraries"
+			log "Installing with sudo... (Ctrl+C to cancel)"
 			if sudo apt-get install -y $CMD > /dev/null; then
-				[ -z "$list" ] && echo "$CMD installed successfully"
+				log "$CMD installed successfully"
 			else
-				rm $HOME/.local/bin/$CMD
+				(cd $HOME/.local/bin ; rm -f $cmds)
 			fi
+		else
+			clear # so the user isn't spooked by the command output
+			log "$CMD installed successfully"
 		fi
 	fi
 }
@@ -198,8 +204,8 @@ set_zsh_as_default_shell() {
 	! command -v zsh &> /dev/null && echo zsh not installed && return
 	if [ "$SHELL" != "$(which zsh)" ]; then
 		chsh -s "$(which zsh)"
-	elif [ -z "$list" ]; then
-		echo default shell is already $SHELL
+	else
+		log default shell is already $SHELL
 	fi
 }
 install_edge() {
@@ -255,7 +261,7 @@ uninstall_cmd_rootless() {
 	cmds=$(ls $TEMP_DIR/$CMD/usr/bin)
 	rm -rf $TEMP_DIR/$CMD
 	(cd $HOME/.local/bin ; rm -f $cmds)
-	[ -z "$list" ] && echo "$CMD removed successfully"
+	log "$CMD removed successfully"
 }
 rootless_mode() {
 	gum confirm "Do you want to run rootless mode?" || return
@@ -415,7 +421,7 @@ user_prompt='Choose a function to execute:'
 if [ -z "$list" ]; then
 	main
 else
-	echo list: $list
+	echo run: $list
 	[ "$arg" ] && list=$(echo "$list" | tr ' ' '\n')
 	echo "$list" | while read -r list_item; do
 		$list_item
