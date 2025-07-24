@@ -101,7 +101,7 @@ install_cmd_rootless() {
 install_gnome_extensions() {
 	command -v chrome-gnome-shell &> /dev/null || install_cmd_root chrome-gnome-shell
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
-		gum confirm "After clicking [Add]/[Allow], close firefox?" || return
+		gum confirm "After clicking [Add]/[Allow], close firefox" || return
 		(
 			cd $HOME/Documents # firefox can't access directories outside of the snap sandbox
 			wget -q https://addons.mozilla.org/firefox/downloads/file/4300298/gnome_shell_integration-12.xpi
@@ -110,20 +110,24 @@ install_gnome_extensions() {
 		)
 	fi
 	if ! gnome-extensions list --enabled | grep -q dash-to-panel; then
-		echo "After clicking [ON]/[Install], click the button: settings -> about -> import from file and select the dash-to-panel.bak"
+		echo "After clicking [ON]/[Install], refresh the page, click on settings -> about -> import from file and select the file dash-to-panel.bak from Desktop and close the window and firefox"
 		wget -qO $HOME/Desktop/dash-to-panel.bak gist.github.com/andrexandre/08622ff1367bf6af7b6ea084fea779be/raw/dash-to-panel.bak
-		gum confirm "To continue, close firefox?" || return
+		gum confirm "firefox must be closed to continue" || return
 		firefox https://extensions.gnome.org/extension/1160/dash-to-panel/
 		rm $HOME/Desktop/dash-to-panel.bak
 	fi
 	if ! gnome-extensions list --enabled | grep -q clipboard-indicator; then
-		gum confirm "After clicking [ON]/[Install], close firefox?" || return
+		gum confirm "After clicking [ON]/[Install], close firefox" || return
 		firefox https://extensions.gnome.org/extension/779/clipboard-indicator/
+	fi
+	if ! gnome-extensions list --enabled | grep -q resource-monitor; then
+		gum confirm "After clicking [ON]/[Install], close firefox" || return
+		firefox https://extensions.gnome.org/extension/1634/resource-monitor/
 	fi
 }
 install_oh_my_zsh() {
-	command -v zsh &> /dev/null || install_cmd_root -q zsh
-	command -v git &> /dev/null || install_cmd_root -q git
+	command -v zsh &> /dev/null || install_cmd_root zsh
+	command -v git &> /dev/null || install_cmd_root git
 	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 install_vscode_root() {
@@ -186,6 +190,8 @@ configure_zsh_and_alias() {
 	)
 	sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' $HOME/.zshrc
 	sed -i 's/robbyrussell/simple/g' $HOME/.zshrc
+	# sed -i 's/^PROMPT=/#PROMPT=/' $ZSH/themes/simple.zsh-theme
+	# sed -i '1s/^/text-to-add-at-beginning\n/' $ZSH/themes/simple.zsh-theme
 	sed -i "/^# zstyle ':omz:update' mode auto/s/^..//" $HOME/.zshrc
 	if grep -q "My custom aliases" $HOME/.zshrc; then
 		echo aliases on .zshrc already added ; return
@@ -199,11 +205,13 @@ install_docker() {
 	sudo usermod -aG docker $USER
 	newgrp docker
 	docker run hello-world
+	log log out and log in to apply changes
 }
 set_zsh_as_default_shell() {
 	! command -v zsh &> /dev/null && echo zsh not installed && return
 	if [ "$SHELL" != "$(which zsh)" ]; then
 		chsh -s "$(which zsh)"
+		log log out and log in to apply changes
 	else
 		log default shell is already $SHELL
 	fi
@@ -212,9 +220,10 @@ install_edge() {
 	command -v microsoft-edge-stable &> /dev/null && echo edge is already installed && return
 	latest_version=$(curl -fsSL https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/ | sed -n '/<pre>/,/<\/pre>/p' | sed 's/<[^>]*>//g' | awk '{print $1}' | sort -V | tail -n 1)
 	wget -q --show-progress -O edge.deb "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/$latest_version"
+	echo 'Run the following commands to install edge:
 	sudo dpkg -i edge.deb
 	sudo apt-get install -f
-	rm edge.deb
+	rm edge.deb'
 }
 system_update() {
 	sudo apt-get update && sudo apt-get upgrade -y
@@ -263,6 +272,14 @@ uninstall_cmd_rootless() {
 	(cd $HOME/.local/bin ; rm -f $cmds)
 	log "$CMD removed successfully"
 }
+install_nerfont_and_superfile() {
+	mkdir -p ~/.local/share/fonts
+	wget https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+	unzip JetBrainsMono.zip -d ~/.local/share/fonts/JetBrainsMono
+	fc-cache -fv
+	rm JetBrainsMono.zip
+	bash -c "$(curl -sLo- https://superfile.netlify.app/install.sh)"
+}
 rootless_mode() {
 	gum confirm "Do you want to run rootless mode?" || return
 	define_settings
@@ -272,7 +289,16 @@ rootless_mode() {
 	install_vscode_extensions
 	configure_vscode_settings
 	configure_zsh_and_alias
+	install_nerfont_and_superfile
 	echo 'export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST' >> $HOME/.zshrc
+	if ! git config --global user.name > /dev/null || ! git config --global user.email > /dev/null; then
+		open https://github.com/settings/emails#:~:text=public%20profile%20email
+		local name=$(gum input --placeholder "Enter your git name")
+		local email=$(gum input --placeholder "Enter your git email")
+		[ -z "$name" ] || [ -z "$email" ] && return
+		git config --global user.name "$name"
+		git config --global user.email "$email"
+	fi
 	quit
 }
 root_mode() {
@@ -282,11 +308,22 @@ root_mode() {
 	install_gnome_extensions
 	install_oh_my_zsh
 	configure_zsh_and_alias
-	set_zsh_as_default_shell
 	install_vscode_root
 	install_vscode_extensions
 	configure_vscode_settings
+	install_docker
+	install_nerfont_and_superfile
 	gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop', 'code.desktop']"
+	if ! git config --global user.name > /dev/null || ! git config --global user.email > /dev/null; then
+		open https://github.com/settings/emails#:~:text=public%20profile%20email
+		local name=$(gum input --placeholder "Enter your git name")
+		local email=$(gum input --placeholder "Enter your git email")
+		[ -z "$name" ] || [ -z "$email" ] && return
+		git config --global user.name "$name"
+		git config --global user.email "$email"
+	fi
+	set_zsh_as_default_shell
+	echo 'sudo reboot to finish the setup'
 	quit
 }
 full_mode() {
@@ -296,18 +333,28 @@ full_mode() {
 	install_gnome_extensions
 	install_oh_my_zsh
 	configure_zsh_and_alias
-	set_zsh_as_default_shell
 	install_vscode_root
 	install_vscode_extensions
 	configure_vscode_settings
+	install_docker
+	install_nerfont_and_superfile
 	setup_tlp
 	install_extras
 	install_edge
 	gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'microsoft-edge.desktop', 'org.gnome.Terminal.desktop', 'code.desktop']"
-	gcl https://github.com/ChrisTitusTech/Top-5-Bootloader-Themes ; echo Theme: vimix ; sudo ./Top-5-Bootloader-Themes/install.sh
+	git clone https://github.com/ChrisTitusTech/Top-5-Bootloader-Themes ; echo "Choose: 1) Vimix" ; cd Top-5-Bootloader-Themes ; sudo ./install.sh
 	sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet"/' /etc/default/grub
 	sudo sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT="2"/' /etc/default/grub
 	sudo update-grub
+	if ! git config --global user.name > /dev/null || ! git config --global user.email > /dev/null; then
+		open https://github.com/settings/emails#:~:text=public%20profile%20email
+		local name=$(gum input --placeholder "Enter your git name")
+		local email=$(gum input --placeholder "Enter your git email")
+		[ -z "$name" ] || [ -z "$email" ] && return
+		git config --global user.name "$name"
+		git config --global user.email "$email"
+	fi
+	set_zsh_as_default_shell
 	echo 'sudo reboot to finish the setup'
 	quit
 }
