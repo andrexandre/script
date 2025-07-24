@@ -1,12 +1,12 @@
 # Linux setup script
 
-This script automates the installation and setup of a bunch of programs in Linux
+![Preview](./preview.gif)
 
-- Install VScode, gnome extensions and normal commands without root
-- Install VScode, edge and docker with root and more...
+This script is designed to simplify and automate Linux tasks. It helps you install and set up applications in Linux
+
+- Install without root: vscode, gnome extensions and linux commands 
+- Install with root: vscode, edge, docker and much more...
 - Setup a bunch of other personal configurations
-
-It has 3 modes (rootless, root and full) that run a collection of commands
 
 ## Usage
 
