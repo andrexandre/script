@@ -34,6 +34,7 @@ curl -sL andrexandre.github.io/old | sh
 ```
 
 > [!IMPORTANT]
+> Some commands can be run in **Git Bash** on Windows, but compatibility is limited
 > Certain features may not function properly unless a Debian-based distribution is used
 
 > [!NOTE]
