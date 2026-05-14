@@ -23,10 +23,11 @@ update_styling_variables() {
 update_styling_variables
 VSCODE_PATH=$HOME/Documents
 log() { echo "$@"; }
+open_url() { if command -v xdg-open &> /dev/null; then xdg-open "$1"; elif command -v start &> /dev/null; then start "$1"; else open "$1"; fi; }
 
-[ "$EUID" -eq 0 ] && (echo "Please do not run as root" ; exit 1)
+[ "$(id -u)" -eq 0 ] && { echo "Please do not run as root" ; exit 1; }
 if [ "$DEBUG" ]; then
-	TEMP_DIR=$(echo debugging) ; mkdir $TEMP_DIR
+	TEMP_DIR=debugging ; mkdir "$TEMP_DIR"
 else
 	TEMP_DIR=$(mktemp -d)
 fi
@@ -40,9 +41,9 @@ fi
 [ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
 shellrc=$HOME/."$(basename "$SHELL")"rc
 if ! echo "$PATH" | grep -q "$HOME/.local/bin" && \
-	! grep -qF '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' $shellrc; then
-	echo '# include ~/.local/bin in PATH' >> $shellrc
-	echo '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' >> $shellrc
+	! grep -qF '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' "$shellrc"; then
+	echo '# include ~/.local/bin in PATH' >> "$shellrc"
+	echo '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' >> "$shellrc"
 fi
 [[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 parse_install_cmd() {
@@ -52,44 +53,44 @@ parse_install_cmd() {
 	else
 		CMD=$1
 	fi
-	if ! apt-cache policy $CMD | grep -q "Candidate:"; then
+	if ! apt-cache policy "$CMD" | grep -q "Candidate:"; then
 		echo "The package $CMD doesn't exist" ; return 1
 	fi
 }
 install_cmd_root() {
 	if parse_install_cmd "$@"; then
-		if ! apt-cache policy $CMD | grep -q 'Installed: (none)'; then
+		if ! apt-cache policy "$CMD" | grep -q 'Installed: (none)'; then
 			echo "$CMD is already installed" ; return
 		else
-			sudo apt-get install -y $CMD > /dev/null &&
+			sudo apt-get install -y "$CMD" > /dev/null &&
 			log "$CMD installed successfully"
 		fi
 	fi
 }
 install_cmd_rootless() {
 	if parse_install_cmd "$@"; then
-		apt-get download $CMD > /dev/null
-		dpkg -x $CMD*.deb $TEMP_DIR/$CMD
-		rm $CMD*.deb
+		apt-get download "$CMD" > /dev/null
+		dpkg -x "$CMD"*.deb "$TEMP_DIR/$CMD"
+		rm "$CMD"*.deb
 		# check if files in .local/bin correspond to the binaries to be installed
-		cmds=$(ls $TEMP_DIR/$CMD/usr/bin)
-		if echo $cmds | grep -Fxf <(ls "$HOME/.local/bin") > /dev/null; then
+		cmds=$(ls "$TEMP_DIR/$CMD/usr/bin")
+		if echo "$cmds" | grep -Fxf <(ls "$HOME/.local/bin") > /dev/null; then
 			log "$CMD is already installed"
-			rm -rf $TEMP_DIR/$CMD
+			rm -rf "$TEMP_DIR/$CMD"
 			return
 		else
-			cp $TEMP_DIR/$CMD/usr/bin/* $HOME/.local/bin
+			cp "$TEMP_DIR/$CMD/usr/bin/"* "$HOME/.local/bin"
 		fi
-		rm -rf $TEMP_DIR/$CMD
+		rm -rf "$TEMP_DIR/$CMD"
 		log Testing the need of libraries...
-		timeout -s KILL 2s $CMD > /dev/null 2>&1
+		timeout -s KILL 2s "$CMD" > /dev/null 2>&1
 		if [ "$?" = "127" ]; then
 			log "$CMD needs libraries"
 			log "Installing with sudo... (Ctrl+C to cancel)"
-			if sudo apt-get install -y $CMD > /dev/null; then
+			if sudo apt-get install -y "$CMD" > /dev/null; then
 				log "$CMD installed successfully"
 			else
-				(cd $HOME/.local/bin ; rm -f $cmds)
+				(cd "$HOME/.local/bin" ; rm -f $cmds)
 			fi
 		else
 			clear # so the user isn't spooked by the command output
@@ -152,31 +153,6 @@ install_vscode_rootless() {
 		echo "mv $HOME/.local/bin/vscode $HOME/.local/bin/<link_name>"
 	else
 		ln -s $VSCODE_PATH/vscode/bin/code $HOME/.local/bin/code
-	fi
-}
-configure_vscode_extensions() {
-	! which code &> /dev/null && echo no code command found && return
-	code --install-extension ms-vscode.cpptools
-	code --install-extension github.copilot
-	code --install-extension ritwickdey.liveserver
-}
-export CODESETTINGSFILE=$HOME/.config/Code/User/settings.json
-configure_vscode_settings() {
-	if [ ! -f "$CODESETTINGSFILE" ]; then
-		echo creating settings.json
-		[ -d "$HOME/.config/Code/User" ] || mkdir -p "$HOME/.config/Code/User"
-		cat << 'EOF' >> $CODESETTINGSFILE
-{
-	"github.copilot.editor.enableCodeActions": false,
-	"extensions.ignoreRecommendations": true,
-	"workbench.startupEditor": "none",
-	"editor.detectIndentation": false,
-	"editor.insertSpaces": false,
-	"files.autoSave": "afterDelay"
-}
-EOF
-	else
-		echo settings.json already created
 	fi
 }
 configure_zsh_and_alias() {
@@ -247,7 +223,7 @@ setup_tlp() {
 }
 quit() {
 	cd - > /dev/null
-	rmdir $TEMP_DIR
+	rmdir "$TEMP_DIR"
 	exit $1
 }
 show_script_code() {
@@ -260,16 +236,16 @@ uninstall_cmd_rootless() {
 	else
 		CMD=$1
 	fi
-	if ! apt-cache policy $CMD | grep -q "Candidate:"; then
+	if ! apt-cache policy "$CMD" | grep -q "Candidate:"; then
 		echo "The package $CMD doesn't exist"
 		return
 	fi
-	apt-get download $CMD > /dev/null
-	dpkg -x $CMD*.deb $TEMP_DIR/$CMD
-	rm $CMD*.deb
-	cmds=$(ls $TEMP_DIR/$CMD/usr/bin)
-	rm -rf $TEMP_DIR/$CMD
-	(cd $HOME/.local/bin ; rm -f $cmds)
+	apt-get download "$CMD" > /dev/null
+	dpkg -x "$CMD"*.deb "$TEMP_DIR/$CMD"
+	rm "$CMD"*.deb
+	cmds=$(ls "$TEMP_DIR/$CMD/usr/bin")
+	rm -rf "$TEMP_DIR/$CMD"
+	(cd "$HOME/.local/bin" ; rm -f $cmds)
 	log "$CMD removed successfully"
 }
 install_nerfont_and_superfile() {
@@ -286,13 +262,11 @@ rootless_mode() {
 	install_gnome_extensions
 	install_oh_my_zsh
 	install_vscode_rootless
-	install_vscode_extensions
-	configure_vscode_settings
 	configure_zsh_and_alias
 	install_nerfont_and_superfile
 	echo 'export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST' >> $HOME/.zshrc
 	if ! git config --global user.name > /dev/null || ! git config --global user.email > /dev/null; then
-		open https://github.com/settings/emails#:~:text=public%20profile%20email
+		open_url https://github.com/settings/emails#:~:text=public%20profile%20email
 		local name=$(gum input --placeholder "Enter your git name")
 		local email=$(gum input --placeholder "Enter your git email")
 		[ -z "$name" ] || [ -z "$email" ] && return
@@ -309,13 +283,11 @@ root_mode() {
 	install_oh_my_zsh
 	configure_zsh_and_alias
 	install_vscode_root
-	install_vscode_extensions
-	configure_vscode_settings
 	install_docker
 	install_nerfont_and_superfile
 	gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop', 'code.desktop']"
 	if ! git config --global user.name > /dev/null || ! git config --global user.email > /dev/null; then
-		open https://github.com/settings/emails#:~:text=public%20profile%20email
+		open_url https://github.com/settings/emails#:~:text=public%20profile%20email
 		local name=$(gum input --placeholder "Enter your git name")
 		local email=$(gum input --placeholder "Enter your git email")
 		[ -z "$name" ] || [ -z "$email" ] && return
@@ -334,8 +306,6 @@ full_mode() {
 	install_oh_my_zsh
 	configure_zsh_and_alias
 	install_vscode_root
-	install_vscode_extensions
-	configure_vscode_settings
 	install_docker
 	install_nerfont_and_superfile
 	setup_tlp
@@ -349,7 +319,7 @@ full_mode() {
 	sudo sed -i 's/^GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT="true"/' /etc/default/grub
 	sudo update-grub
 	if ! git config --global user.name > /dev/null || ! git config --global user.email > /dev/null; then
-		open https://github.com/settings/emails#:~:text=public%20profile%20email
+		open_url https://github.com/settings/emails#:~:text=public%20profile%20email
 		local name=$(gum input --placeholder "Enter your git name")
 		local email=$(gum input --placeholder "Enter your git email")
 		[ -z "$name" ] || [ -z "$email" ] && return
@@ -365,17 +335,17 @@ about() {
 		REPLY=$(gum choose --header="What do you want to know about?" repo docker gum test.sh back)
 		case $REPLY in
 			repo)
-				open https://github.com/andrexandre/script > /dev/null
+				open_url https://github.com/andrexandre/script > /dev/null
 				;;
 			docker)
-				open https://docs.docker.com/engine/install/ubuntu > /dev/null
-				open https://docs.docker.com/engine/install/linux-postinstall > /dev/null
+				open_url https://docs.docker.com/engine/install/ubuntu > /dev/null
+				open_url https://docs.docker.com/engine/install/linux-postinstall > /dev/null
 				;;
 			gum)
-				open https://github.com/charmbracelet/gum?tab=readme-ov-file#gum > /dev/null
+				open_url https://github.com/charmbracelet/gum?tab=readme-ov-file#gum > /dev/null
 				;;
 			test.sh)
-				open https://gist.github.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907 > /dev/null
+				open_url https://gist.github.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907 > /dev/null
 				;;
 		esac
 		[ "$REPLY" = "back" ] && break
@@ -421,8 +391,7 @@ main() {
 					install_vscode_rootless install_vscode_root install_oh_my_zsh install_edge install_docker back)
 				;;
 			configure)
-				REPLY=$(gum choose --header="$user_prompt" configure_vscode_extensions configure_vscode_settings \
-					configure_zsh_and_alias set_zsh_as_default_shell uninstall_cmd_rootless back)
+				REPLY=$(gum choose --header="$user_prompt" configure_zsh_and_alias set_zsh_as_default_shell uninstall_cmd_rootless back)
 				;;
 			system)
 				REPLY=$(gum choose --header="$user_prompt" system_update install_gnome_extensions install_extras \
@@ -448,18 +417,33 @@ main() {
 }
 if ! command -v gum &> /dev/null; then
 	echo "Downloading the latest version of gum..."
-	download_url=$(curl -fsSL https://api.github.com/repos/charmbracelet/gum/releases/latest | grep -Eo '"https://github.com/charmbracelet/gum/releases/download/[^"]*_Linux_x86_64\.tar\.gz"')
+	if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]]; then
+		gum_pattern='_Windows_x86_64\.zip"'
+	else
+		gum_pattern='_Linux_x86_64\.tar\.gz"'
+	fi
+	download_url=$(curl -fsSL https://api.github.com/repos/charmbracelet/gum/releases/latest | grep -Eo "\"https://github.com/charmbracelet/gum/releases/download/[^\"]*$gum_pattern")
 	[ -z "$download_url" ] && echo "Failed to download gum" && quit 1
 	url=$(echo "$download_url" | sed 's/^"//;s/"$//')
-	wget -q --show-progress "$url"
-	gum_latest_release=$(basename "$url" .tar.gz)
-	tar -xzf $gum_latest_release.tar.gz
-	mv $gum_latest_release/gum $HOME/.local/bin
-	rm -rf $gum_latest_release.tar.gz $gum_latest_release
+	curl -# -sLO "$url"
+	filename=$(basename "$url")
+	if [[ "$filename" == *.zip ]]; then
+		dir=${filename%.zip}
+		unzip -q "$filename" -d "$dir"
+	else
+		dir=${filename%.tar.gz}
+		tar -xzf "$filename"
+	fi
+	mv "$dir"/gum $HOME/.local/bin
+	rm -rf "$filename" "$dir"
+fi
+# when piped (curl | bash), gum can't read from stdin; redirect from /dev/tty
+if [ ! -t 0 ]; then
+	gum() { command gum "$@" < /dev/tty; }
 fi
 # toggle debug mode by doing: export DEBUG=y/unset DEBUG
 if [ "$DEBUG" ]; then
-	wget -q gist.github.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907/raw/test.sh
+	curl -sLO gist.github.com/andrexandre/d2b3bd31f14904c7ca7e4dc7fe617907/raw/test.sh
 	bash test.sh
 	rm test.sh
 	gum confirm "Continue?" || quit
