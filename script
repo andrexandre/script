@@ -381,7 +381,7 @@ clone_repo() {
 	fi
 }
 main() {
-	! command -v gum &> /dev/null && echo gum not installed && return
+	! command -v gum &> /dev/null && echo gum not installed && quit 1
 	gum style --bold --border double --padding "0 1" --align center "Welcome to the Linux setup script!"
 	while true; do
 		REPLY=$(gum choose --header="$user_prompt" install configure system mode options $quit_view_code quit)
@@ -430,6 +430,7 @@ if ! command -v gum &> /dev/null; then
 	if [[ "$filename" == *.zip ]]; then
 		dir=${filename%.zip}
 		unzip -q "$filename" -d "$dir"
+		mv $dir/$dir/* $dir/ && rmdir $dir/$dir
 	else
 		dir=${filename%.tar.gz}
 		tar -xzf "$filename"
@@ -439,6 +440,7 @@ if ! command -v gum &> /dev/null; then
 fi
 # when piped (curl | bash), gum can't read from stdin; redirect from /dev/tty
 if [ ! -t 0 ]; then
+	! command -v gum &> /dev/null && echo gum not installed && quit 1
 	gum() { command gum "$@" < /dev/tty; }
 fi
 # toggle debug mode by doing: export DEBUG=y/unset DEBUG
