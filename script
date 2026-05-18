@@ -32,14 +32,14 @@ else
 	TEMP_DIR=$(mktemp -d)
 fi
 if [ ! -d "$TEMP_DIR" ]; then
-	echo "Failed to create temp directory, going home"
-	cd $HOME
-else
-	cd $TEMP_DIR
+	TEMP_DIR="$HOME/.cache/tmp" ; mkdir -p "$TEMP_DIR"
+	echo "Failed to create temp directory, using $TEMP_DIR instead"
 fi
+cd $TEMP_DIR
 
 [ -d "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin"
 shellrc=$HOME/."$(basename "$SHELL")"rc
+[ -f "$shellrc" ] || touch "$shellrc"
 if ! echo "$PATH" | grep -q "$HOME/.local/bin" && \
 	! grep -qF '[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"' "$shellrc"; then
 	echo '# include ~/.local/bin in PATH' >> "$shellrc"
@@ -98,7 +98,6 @@ install_cmd_rootless() {
 		fi
 	fi
 }
-# Configurating extensions
 install_gnome_extensions() {
 	command -v chrome-gnome-shell &> /dev/null || install_cmd_root chrome-gnome-shell
 	if [ ! -f $HOME/snap/firefox/common/.mozilla/firefox/*.default/extensions/chrome-gnome-shell@gnome.org.xpi ]; then
@@ -456,7 +455,7 @@ user_prompt='Choose a function to execute:'
 if [ -z "$list" ]; then
 	main
 else
-	echo run: $list
+	# echo running: $list
 	[ "$arg" ] && list=$(echo "$list" | tr ' ' '\n')
 	echo "$list" | while read -r list_item; do
 		$list_item

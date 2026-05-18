@@ -34,11 +34,11 @@ curl -sL andrexandre.github.io/old | sh
 ```
 
 > [!IMPORTANT]
-> Some commands can be run in **Git Bash** on Windows, but compatibility is limited
+> The script can run in Git Bash on Windows, but compatibility is very limited
 > Certain features may not function properly unless a Debian-based distribution is used
 
 > [!NOTE]
-> If you want a shorter version you can use this also
+> For a shorter version you can run the the following command
 > ```bash
 > curl -L abre.ai/42- | sh
 > ```
