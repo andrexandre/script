@@ -183,12 +183,18 @@ install_docker() {
 	log log out and log in to apply changes
 }
 set_zsh_as_default_shell() {
-	! command -v zsh &> /dev/null && echo zsh not installed && return
-	if [ "$SHELL" != "$(which zsh)" ]; then
-		chsh -s "$(which zsh)"
-		log log out and log in to apply changes
+	local zsh_path current_shell
+	zsh_path=$(command -v zsh) || { echo zsh not installed; return 1; }
+	current_shell=$(getent passwd "$USER" | cut -d: -f7)
+	if [ "$current_shell" != "$zsh_path" ]; then
+		if sudo chsh -s "$zsh_path" "$USER"; then
+			log log out and log in to apply changes
+		else
+			log failed to set zsh as the default shell
+			return 1
+		fi
 	else
-		log default shell is already $SHELL
+		log default shell is already "$current_shell"
 	fi
 }
 install_edge() {
@@ -440,7 +446,13 @@ fi
 # when piped (curl | bash), gum can't read from stdin; redirect from /dev/tty
 if [ ! -t 0 ]; then
 	! command -v gum &> /dev/null && echo gum not installed && quit 1
-	gum() { command gum "$@" < /dev/tty; }
+	gum() {
+		if [ "$1" = "pager" ]; then
+			command gum "$@"
+		else
+			command gum "$@" < /dev/tty
+		fi
+	}
 fi
 # toggle debug mode by doing: export DEBUG=y/unset DEBUG
 if [ "$DEBUG" ]; then
